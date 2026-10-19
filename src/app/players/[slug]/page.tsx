@@ -54,8 +54,8 @@ export default async function PlayerPage({ params }: Props) {
     <main className="flex flex-col gap-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <Link href="/#leaderboard" className="text-sm font-semibold text-brass">
-            ← Leaderboard
+          <Link href="/players" className="text-sm font-semibold text-brass">
+            ← All players
           </Link>
           <h1 className="font-display text-5xl">{me.player.name}</h1>
           <span className="text-mist">

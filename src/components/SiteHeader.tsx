@@ -24,6 +24,9 @@ export async function SiteHeader() {
         <Link href="/#leaderboard" className="px-3 py-3 text-[15px] font-semibold text-brass hover:text-ivory">
           Leaderboard
         </Link>
+        <Link href="/players" className="px-3 py-3 text-[15px] font-semibold text-brass hover:text-ivory">
+          Players
+        </Link>
         <Link href="/achievements" className="px-3 py-3 text-[15px] font-semibold text-brass hover:text-ivory">
           Achievements
         </Link>
