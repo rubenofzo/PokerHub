@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+/* Card Room palette: felt table, ivory cards, brass trim. */
+@theme {
+  --color-felt: #0e3b2c;
+  --color-felt-light: #145140;
+  --color-felt-deep: #0a2c21;
+  --color-felt-panel: rgb(6 30 22 / 0.55);
+  --color-line: #2e6a55;
+  --color-sage: #5e8b78;
+  --color-mist: #a9c1b4;
+  --color-ivory: #f4eedc;
+  --color-ivory-line: #dcd3ba;
+  --color-ink: #1b1b18;
+  --color-ink-muted: #5b5546;
+  --color-brass: #e2c27e;
+  --color-brass-dark: #8a6a2c;
+  --color-chip: #e0675c;
+  --color-chip-dark: #b3261e;
+  --color-win: #8fe0b5;
+  --color-win-dark: #1e6b45;
+
+  --font-display: var(--font-dm-serif), Georgia, serif;
+  --font-sans: var(--font-manrope), system-ui, sans-serif;
+}
+
+html {
+  background: var(--color-felt-deep);
+  color-scheme: dark;
+}
+
+body {
+  min-height: 100vh;
+  background: radial-gradient(ellipse at 50% 0%, var(--color-felt-light) 0%, var(--color-felt) 45%, var(--color-felt-deep) 100%)
+    no-repeat;
+  background-color: var(--color-felt-deep);
+  color: var(--color-ivory);
+  font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brass);
+  outline-offset: 2px;
+}
+
+dialog::backdrop {
+  background: rgb(4 18 13 / 0.75);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
