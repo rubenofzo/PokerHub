@@ -14,7 +14,7 @@ You need Node 20+ and a Postgres database (a local one, or a free Neon branch).
 ```bash
 npm install
 cp .env.example .env        # set DATABASE_URL and ADMIN_PASSWORD
-npm run db:migrate          # creates the tables
+npm run db:migrate          # creates the tables (also runs on every build)
 npm run dev
 ```
 
@@ -29,10 +29,10 @@ Checks: `npm test` (stats and achievement engine), `npm run lint`, `npm run type
 2. In the project, open **Storage → Marketplace → Neon** and create a free database. This
    sets `DATABASE_URL` for you.
 3. Add `ADMIN_PASSWORD` under **Settings → Environment Variables**.
-4. Run the migrations once against that database from your machine:
-   `DATABASE_URL="<the Neon connection string>" npm run db:migrate`
-   (run it again whenever a new file appears in `drizzle/`).
-5. Deploy, then add the subdomain (`poker.` on your domain) under **Settings →
+4. Redeploy (Deployments → ⋯ → Redeploy). Every build first creates or updates the
+   database tables (`scripts/migrate.mjs`), so there is no manual migration step.
+   Environment variable changes only take effect after a redeploy.
+5. Add the subdomain (`poker.` on your domain) under **Settings →
    Domains**.
 
 ## Session sheets
