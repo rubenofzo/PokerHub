@@ -54,7 +54,11 @@ export default async function Dashboard() {
         <KpiCard
           suit="♣"
           label="Chip leader"
-          value={leader.player.name}
+          value={
+            <Link href={`/players/${leader.player.slug}`} className="hover:text-brass-dark hover:underline">
+              {leader.player.name}
+            </Link>
+          }
           sub={`${formatSigned(leader.netCents)} all-time`}
         />
         <KpiCard
