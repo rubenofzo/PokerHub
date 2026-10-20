@@ -75,8 +75,8 @@ export function parseSheetRows(cells: unknown[][]): SheetParseResult {
     // Skip summary lines such as "Total".
     if (/^(total|totaal|sum|som)$/i.test(name)) return;
 
-    const moneyIn = parseAmountToCents(row[columns.in!] ?? 0);
-    const moneyOut = parseAmountToCents(row[columns.out!] ?? 0);
+    const moneyIn = parseAmount(row[columns.in!]);
+    const moneyOut = parseAmount(row[columns.out!]);
     if (moneyIn === null || moneyOut === null || moneyIn < 0 || moneyOut < 0) {
       errors.push(`Row ${line} (${name}): money in and out must be amounts of 0 or more.`);
       return;
@@ -99,6 +99,30 @@ export function parseSheetRows(cells: unknown[][]): SheetParseResult {
 
   if (rows.length === 0 && errors.length === 0) errors.push("The sheet has no player rows.");
   return { rows, errors, hasBuyInsColumn: columns.buyIns !== undefined };
+}
+
+/** An empty cell counts as 0, so a template with blank amounts reads back cleanly. */
+function parseAmount(cell: unknown): number | null {
+  if (cell == null || (typeof cell === "string" && cell.trim() === "")) return 0;
+  return parseAmountToCents(cell);
+}
+
+/** Header of the CSV template, in the order parseSheetRows reads best. */
+export const TEMPLATE_HEADER = ["Name", "Money in", "Money out", "Buy-ins"];
+
+function csvField(value: string): string {
+  return /[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+}
+
+/** A CSV with one row per name and the amounts left empty, to fill in at the table. */
+export function templateCsv(names: string[]): string {
+  const lines = [TEMPLATE_HEADER.join(","), ...names.map((n) => `${csvField(n)},,,`)];
+  return `${lines.join("\r\n")}\r\n`;
+}
+
+/** pokerhub-2026-10-24.csv, or pokerhub-session-12.csv while the date is TBD. */
+export function templateFilename(sessionId: number, date: string | null): string {
+  return date ? `pokerhub-${date}.csv` : `pokerhub-session-${sessionId}.csv`;
 }
 
 /** Minimal CSV reader: detects ; , or tab as separator and handles quoted fields. */

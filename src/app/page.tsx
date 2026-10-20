@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BalanceChart } from "@/components/BalanceChart";
 import { AchievementDetailProvider, AchievementDetailTrigger } from "@/components/AchievementDetail";
 import { Badge } from "@/components/Badge";
+import { NextSessionCard } from "@/components/NextSessionCard";
 import { StatsTable } from "@/components/StatsTable";
 import { CardPanel, Chevron, EmptyState, FeltPanel, KpiCard, Money, PlayerDot, SectionTitle } from "@/components/ui";
 import { TIER_LABEL } from "@/achievements/engine";
@@ -11,14 +12,18 @@ import { formatEuro, formatSigned } from "@/lib/money";
 import { achievementViews, chartData, playerColorMap, statsRows } from "@/lib/views";
 
 export default async function Dashboard() {
-  const { stats, achievements, playerById } = await getHub();
+  const { stats, achievements, playerById, nextSession } = await getHub();
+  const colors = playerColorMap(stats);
+  const next = nextSession && <NextSessionCard session={nextSession} colors={colors} />;
 
   if (stats.sessions.length === 0) {
-    return (
+    return next ? (
+      <main className="flex flex-col gap-4 md:gap-8">{next}</main>
+    ) : (
       <EmptyState>
         No sessions yet.{" "}
         <Link href="/admin" className="font-bold text-brass underline">
-          Upload the first one
+          Plan the first one
         </Link>{" "}
         to deal everyone in.
       </EmptyState>
@@ -30,7 +35,6 @@ export default async function Dashboard() {
   const worst = allResults.reduce((w, r) => (r.netCents < w.netCents ? r : w));
   const totalIn = stats.sessions.reduce((s, x) => s + x.potCents, 0);
   const chart = chartData(stats);
-  const colors = playerColorMap(stats);
   const recentSessions = [...stats.sessions].reverse().slice(0, 5);
   const summaryById = new Map(achievements.summaries.map((s) => [s.definition.id, s]));
   // Newest session first, and within a session the rarest unlocks first.
@@ -45,6 +49,7 @@ export default async function Dashboard() {
 
   return (
     <main className="flex flex-col gap-4 md:gap-8">
+      {next}
       <section
         aria-label="Key numbers"
         className="grid grid-cols-2 gap-2.5 md:grid-cols-[repeat(auto-fit,minmax(220px,1fr))] md:gap-5"

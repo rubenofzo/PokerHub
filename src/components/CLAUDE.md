@@ -13,7 +13,7 @@ component per UI element; see the root `CLAUDE.md` for the breakpoint rule.
 | `Chevron`, `EmptyState`, `TIER_TEXT` | `ui.tsx` | Row chevron; empty-state panel; rarity label colours on phones | Phone list rows; empty pages; `AchievementRow` |
 | `ProgressBar` | `ui.tsx` | Progress towards a locked achievement | `AchievementRow`, `AchievementDetail` |
 | `DialogClose` | `ui.tsx` | Round close button for the ivory dialogs | `AchievementDetail`, `AchievementShowcase` dialog |
-| `SiteHeader` | `SiteHeader.tsx` | Logo, meta line, nav; on phones a slim row with a round upload button and no nav links | Layout (every page) |
+| `SiteHeader` | `SiteHeader.tsx` | Logo, meta line (with "next game" when one is planned), nav and the "New session" button; on phones a slim row with a round plus button and no nav links | Layout (every page) |
 | `BottomNav` | `BottomNav.tsx` | Phone-only fixed tab bar (Home, Players, Achievements), active tab in brass | Layout (every page) |
 | `Badge` | `Badge.tsx` | Achievement badge with a ring per rarity tier (uncommon is mint); sizes `sm`/`md` and responsive `row`/`showcase`/`detail` | Everywhere achievements are shown |
 | `AchievementRow` | `AchievementRow.tsx` | One achievement row: badge, title and description, winners (`group`) or unlock date (`player`), fixed-width rarity column; opens the detail | `/achievements`, player "view all" dialog |
@@ -22,6 +22,13 @@ component per UI element; see the root `CLAUDE.md` for the breakpoint rule.
 | `AchievementShowcase` | `AchievementShowcase.tsx` | In a `FeltPanel`: the player's earned badges (swipeable row on phones, top five on desktop) and the "view all" dialog (full screen on phones) | `/players/[slug]` |
 | `BalanceChart` | `BalanceChart.tsx` | Recharts line chart of cumulative balance with toggle chips (one swipeable row on phones) | `/`, `/players/[slug]` |
 | `StatsTable` | `StatsTable.tsx` | Sortable all-stats table; on phones it scrolls sideways under a sticky player column | `/` |
-| `SessionEditor` | `SessionEditor.tsx` | Upload/edit form with preview | `/admin`, `/admin/sessions/[id]` |
+| `SessionEditor` | `SessionEditor.tsx` | Upload/edit form with preview; `results` makes it the upload for an upcoming session (file input, rows pre-filled from the sign-ups, date may start empty) | `/admin` (from data), `/admin/sessions/[id]`, upcoming `/sessions/[id]` (admin) |
 | `LoginForm` | `LoginForm.tsx` | Admin sign-in | `/admin` |
-| `DeleteSessionButton` | `DeleteSessionButton.tsx` | Confirmed session delete | `/admin/sessions/[id]` |
+| `DeleteSessionButton` | `DeleteSessionButton.tsx` | Confirmed session delete | `/admin`, upcoming `/sessions/[id]` (admin) |
+| `Countdown` | `Countdown.tsx` | Client clock to a UTC instant from the server: days/hours/min/sec in the serif (`hero` or `card`), then "Dealing now" / "Today" / "Waiting for results"; numbers render after mount only | `NextSessionCard`, `UpcomingSession` |
+| `NextSessionCard` | `NextSessionCard.tsx` | Felt card linking to the next session: date and time, note, countdown, "N players going" with `PlayerDot`s | `/` |
+| `UpcomingSession` | `UpcomingSession.tsx` | The upcoming-session page: felt hero with countdown, going list and sign-up form; for the admin the details form, delete, template download and results upload | `/sessions/[id]` |
+| `GoingList` | `GoingList.tsx` | Signed-up players with `PlayerDot`; the "×" to remove someone shows only to the admin | `UpcomingSession` |
+| `SignUpForm` | `SignUpForm.tsx` | Public name field with known players in a `<datalist>`, honeypot, pending and result line | `UpcomingSession` |
+| `PlanSessionForm` | `PlanSessionForm.tsx` | Date, start time (Amsterdam), "Date TBD" / "Time TBD" boxes and note; plans a session, or with `initial` edits one | `/admin`, `UpcomingSession` (admin) |
+| `NoGamesYet` | `NoGamesYet.tsx` | Player page for someone with sign-ups but no results: name and the sessions they're going to | `/players/[slug]` |

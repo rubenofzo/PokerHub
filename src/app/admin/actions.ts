@@ -1,12 +1,13 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb, schema } from "@/db";
 import { endAdminSession, passwordMatches, requireAdmin, startAdminSession } from "@/lib/auth";
-import { cleanName, normalizeName, slugify } from "@/lib/names";
+import { cleanName } from "@/lib/names";
+import { deleteIdlePlayers, playerResolver, UserError } from "@/lib/players";
 
 export type LoginState = { error?: string };
 
@@ -51,47 +52,20 @@ export async function saveSession(input: SaveSessionInput): Promise<SaveSessionR
 
   try {
     const sessionId = await getDb().transaction(async (tx) => {
-      const players = await tx.select().from(schema.players);
-      const aliases = await tx.select().from(schema.playerAliases);
-      const byKey = new Map<string, number>();
-      for (const p of players) byKey.set(normalizeName(p.name), p.id);
-      for (const a of aliases) if (!byKey.has(a.alias)) byKey.set(a.alias, a.playerId);
-      const usedSlugs = new Set(players.map((p) => p.slug));
-      const known = new Map(players.map((p) => [p.id, p]));
-
+      const resolve = await playerResolver(tx);
       const resolved: { playerId: number; row: (typeof data.rows)[number] }[] = [];
       for (const row of data.rows) {
-        const key = normalizeName(row.name);
-        let playerId: number;
-        if (row.playerId !== null) {
-          const player = known.get(row.playerId);
-          if (!player) throw new UserError(`Player for "${row.name}" no longer exists.`);
-          playerId = player.id;
-          if (normalizeName(player.name) !== key && !byKey.has(key)) {
-            await tx.insert(schema.playerAliases).values({ alias: key, playerId }).onConflictDoNothing();
-            byKey.set(key, playerId);
-          }
-        } else if (byKey.has(key)) {
-          playerId = byKey.get(key)!;
-        } else {
-          let slug = slugify(row.name);
-          for (let n = 2; usedSlugs.has(slug); n++) slug = `${slugify(row.name)}-${n}`;
-          usedSlugs.add(slug);
-          const [created] = await tx
-            .insert(schema.players)
-            .values({ name: row.name, slug })
-            .returning();
-          playerId = created.id;
-          byKey.set(key, playerId);
-          known.set(playerId, created);
+        const player = await resolve(row.name, row.playerId);
+        if (resolved.some((r) => r.playerId === player.id)) {
+          throw new UserError(`${player.name} appears twice in this session.`);
         }
-        if (resolved.some((r) => r.playerId === playerId)) {
-          throw new UserError(`${known.get(playerId)?.name ?? row.name} appears twice in this session.`);
-        }
-        resolved.push({ playerId, row });
+        resolved.push({ playerId: player.id, row });
       }
 
       let id = data.sessionId;
+      // Players who were on this session before (signed up, or in the old results) and may
+      // now have nothing left, checked once the new results are in.
+      const before: number[] = [];
       const values = { date: data.date, note: data.note || null, sourceFilename: data.sourceFilename || null };
       if (id !== null) {
         const updated = await tx
@@ -100,7 +74,16 @@ export async function saveSession(input: SaveSessionInput): Promise<SaveSessionR
           .where(eq(schema.sessions.id, id))
           .returning({ id: schema.sessions.id });
         if (updated.length === 0) throw new UserError("That session no longer exists.");
-        await tx.delete(schema.results).where(eq(schema.results.sessionId, id));
+        // The results replace the going list.
+        const signups = await tx
+          .delete(schema.signups)
+          .where(eq(schema.signups.sessionId, id))
+          .returning({ playerId: schema.signups.playerId });
+        const old = await tx
+          .delete(schema.results)
+          .where(eq(schema.results.sessionId, id))
+          .returning({ playerId: schema.results.playerId });
+        before.push(...signups.map((s) => s.playerId), ...old.map((r) => r.playerId));
       } else {
         const [created] = await tx.insert(schema.sessions).values(values).returning({ id: schema.sessions.id });
         id = created.id;
@@ -115,6 +98,7 @@ export async function saveSession(input: SaveSessionInput): Promise<SaveSessionR
           buyIns: row.buyIns,
         })),
       );
+      await deleteIdlePlayers(tx, before);
       return id;
     });
 
@@ -131,9 +115,84 @@ export async function deleteSession(formData: FormData): Promise<void> {
   await requireAdmin();
   const id = Number(formData.get("sessionId"));
   if (!Number.isInteger(id) || id <= 0) return;
-  await getDb().delete(schema.sessions).where(eq(schema.sessions.id, id));
+  await getDb().transaction(async (tx) => {
+    const signups = await tx.select().from(schema.signups).where(eq(schema.signups.sessionId, id));
+    const results = await tx.select().from(schema.results).where(eq(schema.results.sessionId, id));
+    await tx.delete(schema.sessions).where(eq(schema.sessions.id, id));
+    await deleteIdlePlayers(tx, [...signups, ...results].map((r) => r.playerId));
+  });
   revalidatePath("/", "layout");
   redirect("/admin");
 }
 
-class UserError extends Error {}
+export type DetailsState = { error?: string; saved?: boolean };
+
+const detailsSchema = z.object({
+  date: z.iso.date("Pick a date, or tick Date TBD.").nullable(),
+  startTime: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Pick a start time, or tick Time TBD.")
+    .nullable(),
+  note: z.string().trim().max(500, "Keep the note under 500 characters.").nullable(),
+});
+
+/** Date, time and note from the plan / edit details form; ticking TBD sends null. */
+function readDetails(formData: FormData) {
+  const field = (name: string) => String(formData.get(name) ?? "").trim();
+  return detailsSchema.safeParse({
+    date: formData.get("dateTbd") ? null : field("date"),
+    startTime: formData.get("timeTbd") ? null : field("startTime"),
+    note: field("note") || null,
+  });
+}
+
+/** Plans an upcoming session (no results yet) and opens its page. */
+export async function planSession(_prev: DetailsState, formData: FormData): Promise<DetailsState> {
+  await requireAdmin();
+  const parsed = readDetails(formData);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid details." };
+  const [created] = await getDb()
+    .insert(schema.sessions)
+    .values(parsed.data)
+    .returning({ id: schema.sessions.id });
+  revalidatePath("/", "layout");
+  redirect(`/sessions/${created.id}`);
+}
+
+/** Changes the date, time and note of an upcoming session. */
+export async function updateSessionDetails(_prev: DetailsState, formData: FormData): Promise<DetailsState> {
+  await requireAdmin();
+  const id = Number(formData.get("sessionId"));
+  if (!Number.isInteger(id) || id <= 0) return { error: "Unknown session." };
+  const parsed = readDetails(formData);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid details." };
+  const [played] = await getDb()
+    .select({ sessionId: schema.results.sessionId })
+    .from(schema.results)
+    .where(eq(schema.results.sessionId, id))
+    .limit(1);
+  if (played) return { error: "This session has results; edit it from the admin page." };
+  const updated = await getDb()
+    .update(schema.sessions)
+    .set(parsed.data)
+    .where(eq(schema.sessions.id, id))
+    .returning({ id: schema.sessions.id });
+  if (updated.length === 0) return { error: "That session no longer exists." };
+  revalidatePath("/", "layout");
+  return { saved: true };
+}
+
+/** Takes a player off a going list; a player left with no results and no sign-ups is deleted. */
+export async function removeSignup(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const sessionId = Number(formData.get("sessionId"));
+  const playerId = Number(formData.get("playerId"));
+  if (!Number.isInteger(sessionId) || !Number.isInteger(playerId)) return;
+  await getDb().transaction(async (tx) => {
+    await tx
+      .delete(schema.signups)
+      .where(and(eq(schema.signups.sessionId, sessionId), eq(schema.signups.playerId, playerId)));
+    await deleteIdlePlayers(tx, [playerId]);
+  });
+  revalidatePath("/", "layout");
+}

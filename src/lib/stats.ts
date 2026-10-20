@@ -191,7 +191,9 @@ export function formatSessionLabel(date: string): string {
 
 export function computeStats(players: PlayerRecord[], rawSessions: RawSession[]): HubStats {
   const playersById = new Map(players.map((p) => [p.id, p]));
-  const sessions = sortSessions(rawSessions).map((s, i) => summarizeSession(s, i + 1, playersById));
+  // Upcoming sessions have no results yet; they don't count towards numbering or attendance.
+  const played = rawSessions.filter((s) => s.results.length > 0);
+  const sessions = sortSessions(played).map((s, i) => summarizeSession(s, i + 1, playersById));
 
   const histories = new Map<number, PlayerSessionEntry[]>();
   const running = new Map<number, number>();

@@ -4,7 +4,8 @@ import { cache } from "react";
 import { asc } from "drizzle-orm";
 import { databaseUrl, getDb, schema } from "@/db";
 import { evaluateAchievements } from "@/achievements/engine";
-import { computeStats, type RawSession } from "./stats";
+import { countdownPhase, shortTime, startInstant } from "./schedule";
+import { computeStats, type PlayerRecord, type RawSession } from "./stats";
 
 /**
  * Loads everything once per request and derives all stats from it. The data set is tiny
@@ -14,32 +15,75 @@ import { computeStats, type RawSession } from "./stats";
 export const getHub = cache(async () => {
   await connection();
   const db = getDb();
-  const [players, sessions, results, aliases] = await Promise.all([
+  const [players, sessions, results, aliases, signups] = await Promise.all([
     db.select().from(schema.players).orderBy(asc(schema.players.name)),
     db.select().from(schema.sessions),
     db.select().from(schema.results),
     db.select().from(schema.playerAliases),
+    db.select().from(schema.signups).orderBy(asc(schema.signups.createdAt)),
   ]);
 
-  const raw: RawSession[] = sessions.map((s) => ({
-    id: s.id,
-    date: s.date,
-    note: s.note,
-    results: results.filter((r) => r.sessionId === s.id),
-  }));
   const playerRecords = players.map((p) => ({ id: p.id, name: p.name, slug: p.slug }));
+  const playerById = new Map(playerRecords.map((p) => [p.id, p]));
+  const playedIds = new Set(results.map((r) => r.sessionId));
+
+  // Only played sessions (with results) feed the stats; played sessions always have a date.
+  const raw: RawSession[] = sessions.flatMap((s) =>
+    playedIds.has(s.id) && s.date
+      ? [{ id: s.id, date: s.date, note: s.note, results: results.filter((r) => r.sessionId === s.id) }]
+      : [],
+  );
   const stats = computeStats(playerRecords, raw);
   const achievements = evaluateAchievements(stats);
+
+  const upcoming: UpcomingSession[] = sessions
+    .filter((s) => !playedIds.has(s.id))
+    .map((s) => {
+      const startsAt = startInstant(s.date, s.startTime);
+      return {
+        id: s.id,
+        date: s.date,
+        startTime: shortTime(s.startTime),
+        note: s.note,
+        startsAt: startsAt?.toISOString() ?? null,
+        going: signups.flatMap((g) => (g.sessionId === s.id && playerById.has(g.playerId) ? [playerById.get(g.playerId)!] : [])),
+      };
+    })
+    // Soonest first, TBD dates last.
+    .sort((a, b) => startMs(a) - startMs(b) || a.id - b.id);
+
+  // The next one to show on home: the soonest that hasn't finished yet, else the soonest.
+  const now = Date.now();
+  const nextSession =
+    upcoming.find((u) => !u.startsAt || countdownPhase(Date.parse(u.startsAt), now, u.startTime !== null) !== "waiting") ??
+    upcoming[0] ??
+    null;
 
   return {
     allPlayers: playerRecords,
     aliases,
-    sessionsMeta: new Map(sessions.map((s) => [s.id, s])),
     stats,
     achievements,
-    playerById: new Map(playerRecords.map((p) => [p.id, p])),
+    playerById,
+    upcoming,
+    nextSession,
   };
 });
+
+const startMs = (s: UpcomingSession) => (s.startsAt ? Date.parse(s.startsAt) : Infinity);
+
+/** A session without results yet, with its start as a UTC instant (null while the date is TBD). */
+export type UpcomingSession = {
+  id: number;
+  date: string | null;
+  /** "20:00" in Europe/Amsterdam, or null while TBD. */
+  startTime: string | null;
+  note: string | null;
+  /** ISO instant the countdown runs to. */
+  startsAt: string | null;
+  /** Signed-up players, in sign-up order. */
+  going: PlayerRecord[];
+};
 
 export type Hub = Awaited<ReturnType<typeof getHub>>;
 

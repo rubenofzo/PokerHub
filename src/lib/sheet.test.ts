@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseAmountToCents } from "./money";
-import { dateFromFilename, parseCsv, parseSheetRows } from "./sheet";
+import { dateFromFilename, parseCsv, parseSheetRows, templateCsv, templateFilename } from "./sheet";
 
 describe("parseAmountToCents", () => {
   it.each([
@@ -80,5 +80,25 @@ describe("dateFromFilename", () => {
     expect(dateFromFilename("poker_16-10-2026.csv")).toBe("2026-10-16");
     expect(dateFromFilename("poker.xlsx")).toBeNull();
     expect(dateFromFilename("2026-02-31.xlsx")).toBeNull();
+  });
+});
+
+describe("templateCsv", () => {
+  it("round-trips through parseCsv and parseSheetRows without errors", () => {
+    const names = ["Tijs", "de Boer, R", 'Sam "the shark"', "Zoë"];
+    const csv = templateCsv(names);
+    expect(csv.split("\r\n")[0]).toBe("Name,Money in,Money out,Buy-ins");
+    const result = parseSheetRows(parseCsv(csv));
+    expect(result.errors).toEqual([]);
+    expect(result.hasBuyInsColumn).toBe(true);
+    expect(result.rows).toEqual(
+      names.map((name) => ({ name, moneyInCents: 0, moneyOutCents: 0, buyIns: null })),
+    );
+  });
+
+  it("names the file after the date, or the session while the date is TBD", () => {
+    expect(templateFilename(7, "2026-10-24")).toBe("pokerhub-2026-10-24.csv");
+    expect(dateFromFilename(templateFilename(7, "2026-10-24"))).toBe("2026-10-24");
+    expect(templateFilename(7, null)).toBe("pokerhub-session-7.csv");
   });
 });

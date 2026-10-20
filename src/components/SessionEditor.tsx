@@ -16,26 +16,36 @@ type EditorRow = { key: number; name: string; moneyIn: string; moneyOut: string;
 
 export type EditorInitial = {
   sessionId: number;
-  date: string;
+  /** Null for an upcoming session whose date is still TBD: the field starts empty. */
+  date: string | null;
   note: string | null;
-  rows: { name: string; moneyInCents: number; moneyOutCents: number; buyIns: number | null; playerId: number }[];
+  /** Amounts are null for a row pre-filled from a sign-up (the input starts empty). */
+  rows: { name: string; moneyInCents: number | null; moneyOutCents: number | null; buyIns: number | null; playerId: number }[];
 };
 
 let nextKey = 1;
-const centsToInput = (c: number) => (c / 100).toFixed(2);
+const centsToInput = (c: number | null) => (c === null ? "" : (c / 100).toFixed(2));
 const today = () => new Date().toISOString().slice(0, 10);
 
+/**
+ * Upload or edit form with a live preview. Without `initial` it creates a session from a
+ * sheet. With `initial` it edits that session; `results` marks it as the upload for an
+ * upcoming session (file input shown, rows pre-filled from the sign-ups).
+ */
 export function SessionEditor({
   players,
   aliases,
   initial,
+  results = false,
 }: {
   players: PlayerOption[];
   aliases: Alias[];
   initial?: EditorInitial;
+  results?: boolean;
 }) {
   const router = useRouter();
-  const [date, setDate] = useState(initial?.date ?? today());
+  const withFile = !initial || results;
+  const [date, setDate] = useState(initial ? (initial.date ?? "") : today());
   const [note, setNote] = useState(initial?.note ?? "");
   const [filename, setFilename] = useState<string | null>(null);
   const [rows, setRows] = useState<EditorRow[]>(
@@ -135,6 +145,7 @@ export function SessionEditor({
 
   function onSave() {
     setError(null);
+    if (!date) return setError("Pick the session date first.");
     if (!preview.valid) return setError("Fix the amounts marked in red first.");
     if (rows.some((r) => !r.name.trim())) return setError("Every row needs a name.");
     if (duplicates.size) return setError("A player appears twice. Merge those rows first.");
@@ -170,7 +181,7 @@ export function SessionEditor({
   return (
     <div className="flex flex-col gap-5 text-ink">
       <div className="flex flex-wrap items-end gap-4">
-        {!initial && (
+        {withFile && (
           <label className="flex min-w-[240px] flex-1 flex-col gap-1.5 text-sm font-bold text-ink-muted">
             Spreadsheet (.xlsx or .csv)
             <input
@@ -191,7 +202,7 @@ export function SessionEditor({
         </label>
       </div>
 
-      {!initial && (
+      {withFile && (
         <p className="text-sm text-ink-muted">
           Columns: <b>Name</b>, <b>Money in</b>, <b>Money out</b>, and optionally <b>Buy-ins</b>. A date like
           2026-10-16 in the filename fills in the date. Without a Buy-ins column, buy-ins are estimated as money in ÷ €5.
@@ -207,7 +218,7 @@ export function SessionEditor({
       )}
 
       {rows.length > 0 && (
-        <div className="overflow-x-auto">
+        <div className="relative overflow-x-auto">
           <table className="w-full min-w-[820px] text-[15px]">
             <thead>
               <tr className="text-left text-xs font-bold tracking-[0.12em] text-ink-muted uppercase">
@@ -343,7 +354,7 @@ export function SessionEditor({
           onClick={onSave}
           className="min-h-12 rounded-full bg-felt px-7 font-bold text-ivory hover:bg-felt-light disabled:opacity-50"
         >
-          {pending ? "Saving…" : initial ? "Save changes" : "Save session"}
+          {pending ? "Saving…" : results ? "Save results" : initial ? "Save changes" : "Save session"}
         </button>
       </div>
     </div>
