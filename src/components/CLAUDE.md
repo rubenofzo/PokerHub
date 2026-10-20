@@ -14,7 +14,7 @@ component per UI element; see the root `CLAUDE.md` for the breakpoint rule.
 | `ProgressBar` | `ui.tsx` | Progress towards a locked achievement | `AchievementRow`, `AchievementDetail` |
 | `DialogClose` | `ui.tsx` | Round close button for the ivory dialogs | `AchievementDetail`, `AchievementShowcase` dialog |
 | `SiteHeader` | `SiteHeader.tsx` | Logo, meta line, nav; on phones a slim row with a round upload button and no nav links | Layout (every page) |
-| `BottomNav` | `BottomNav.tsx` | Phone-only fixed tab bar (Table, Players, Achievements), active tab in brass | Layout (every page) |
+| `BottomNav` | `BottomNav.tsx` | Phone-only fixed tab bar (Home, Players, Achievements), active tab in brass | Layout (every page) |
 | `Badge` | `Badge.tsx` | Achievement badge with a ring per rarity tier (uncommon is mint); sizes `sm`/`md` and responsive `row`/`showcase`/`detail` | Everywhere achievements are shown |
 | `AchievementRow` | `AchievementRow.tsx` | One achievement row: badge, title and description, winners (`group`) or unlock date (`player`), fixed-width rarity column; opens the detail | `/achievements`, player "view all" dialog |
 | `AchievementDetailProvider`, `AchievementDetailTrigger` | `AchievementDetail.tsx` | Holds the achievement detail `<dialog>` (bottom sheet on phones, centred modal on desktop) and buttons that open it; also defines `AchievementView` (hidden, locked ones arrive redacted from `views.ts`) | `/achievements`, `/` latest achievements, player showcase and dialog, `/sessions/[id]` (phones) |

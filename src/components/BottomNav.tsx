@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 const TABS = [
   {
     href: "/",
-    label: "Table",
+    label: "Home",
     match: (p: string) => p === "/" || p.startsWith("/sessions"),
     icon: (
       <>
