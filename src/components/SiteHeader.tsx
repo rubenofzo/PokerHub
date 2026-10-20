@@ -15,7 +15,7 @@ export async function SiteHeader() {
     `${stats.players.length} ${stats.players.length === 1 ? "player" : "players"}`,
     last ? `last game ${formatDate(last.date)}` : "no games yet",
   ];
-  if (nextSession) parts.push(`next game ${nextSession.date ? formatSessionDate(nextSession.date) : "TBD"}`);
+
 
   return (
     <header className="grid grid-cols-[1fr_auto] items-center gap-x-4 md:flex md:flex-wrap md:items-end md:justify-between md:gap-4 md:border-b md:border-line md:pb-6">
@@ -30,7 +30,15 @@ export async function SiteHeader() {
         >
           PokerHub
         </Link>
-        <span className="col-span-2 mt-1.5 text-[12.5px] text-mist md:mt-0 md:text-[15px]">{parts.join(" · ")}</span>
+        <span className="col-span-2 mt-1.5 text-[12.5px] text-mist md:mt-0 md:text-[15px]">
+          {parts.join(" · ")}
+          {/* Desktop only: phones see the next session on home, and the line stays one row. */}
+          {nextSession && (
+            <span className="hidden md:inline">
+              {" "}· next game {nextSession.date ? formatSessionDate(nextSession.date) : "TBD"}
+            </span>
+          )}
+        </span>
       </div>
       <nav className="col-start-2 row-span-2 row-start-1 flex items-center gap-1 md:flex-wrap md:gap-3">
         <Link href="/#leaderboard" className="hidden px-3 py-3 text-[15px] font-semibold text-brass hover:text-ivory md:inline">

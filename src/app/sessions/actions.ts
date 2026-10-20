@@ -30,10 +30,13 @@ export async function signUp(_prev: SignUpState, formData: FormData): Promise<Si
 
   try {
     const outcome = await getDb().transaction(async (tx) => {
+      // Lock the session row: sign-ups queue behind each other and behind a results upload,
+      // so the cap holds and nobody lands on a session that was just played.
       const [session] = await tx
         .select({ id: schema.sessions.id })
         .from(schema.sessions)
-        .where(eq(schema.sessions.id, sessionId));
+        .where(eq(schema.sessions.id, sessionId))
+        .for("update");
       if (!session) return { error: "That session no longer exists." };
       const [{ played }] = await tx
         .select({ played: count() })

@@ -10,7 +10,6 @@ function subscribe(onTick: () => void) {
   return () => clearInterval(timer);
 }
 const nowSecond = () => Math.floor(Date.now() / 1000);
-const noTime = () => null;
 
 const UNITS = [
   ["days", "Days"],
@@ -25,22 +24,25 @@ const STATUS = { dealing: "Dealing now", today: "Today", waiting: "Waiting for r
  * Days, hours, minutes and seconds to `startsAt` (a UTC instant from the server), in the
  * display serif. `hero` is the big one on the session page, `card` the home card. Once the
  * start passes it reads "Dealing now" (or "Today" when the time is TBD), later "Waiting for
- * results". It renders the numbers only after mount, so server and client HTML match.
+ * results". The server renders it at `serverNow` (the request time) and hydration uses that
+ * same time, so the HTML matches and nothing shifts; then it ticks every second.
  */
 export function Countdown({
   startsAt,
   timeKnown,
+  serverNow,
   size = "card",
   className,
 }: {
   startsAt: string;
   timeKnown: boolean;
+  serverNow: number;
   size?: "hero" | "card";
   className?: string;
 }) {
-  const now = useSyncExternalStore(subscribe, nowSecond, noTime);
+  const now = useSyncExternalStore(subscribe, nowSecond, () => Math.floor(serverNow / 1000));
   const start = Date.parse(startsAt);
-  const phase = now === null ? "countdown" : countdownPhase(start, now * 1000, timeKnown);
+  const phase = countdownPhase(start, now * 1000, timeKnown);
   const hero = size === "hero";
 
   if (phase !== "countdown") {
@@ -58,11 +60,11 @@ export function Countdown({
     );
   }
 
-  const parts = now === null ? null : splitDuration(start - now * 1000);
+  const parts = splitDuration(start - now * 1000);
   return (
     <div
       role="timer"
-      aria-label={parts ? `${parts.days} days, ${parts.hours} hours and ${parts.minutes} minutes to go` : "Countdown"}
+      aria-label={`${parts.days} days, ${parts.hours} hours and ${parts.minutes} minutes to go`}
       className={clsx("grid grid-cols-4", hero ? "gap-2 md:gap-4" : "gap-1.5 md:gap-3", className)}
     >
       {UNITS.map(([key, label]) => (
@@ -79,7 +81,7 @@ export function Countdown({
               hero ? "text-[38px] md:text-[64px]" : "text-[28px] md:text-[40px]",
             )}
           >
-            {parts ? String(parts[key]).padStart(2, "0") : "––"}
+            {String(parts[key]).padStart(2, "0")}
           </span>
           <span className="mt-1 text-[9.5px] font-bold tracking-[0.14em] text-mist uppercase md:mt-1.5 md:text-xs">
             {label}

@@ -67,6 +67,8 @@ export const getHub = cache(async () => {
     playerById,
     upcoming,
     nextSession,
+    /** Request time, so countdowns render their real state on the server too. */
+    renderedAt: now,
   };
 });
 

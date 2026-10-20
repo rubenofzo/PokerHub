@@ -39,8 +39,13 @@ Recharts. Everything is recalculated from the session history on each request (`
   `Countdown` runs to (start of the day when the time is TBD), and formats "Sat 24 Oct · 20:00".
 - Names match the same way everywhere through `playerResolver` / `resolvePlayer` in
   `src/lib/players.ts` (normalized name, aliases, else a new player). `deleteIdlePlayers`
-  removes players with no results and no sign-ups after an upload, a removed sign-up and a
-  deleted session; players with results are never deleted.
+  removes players with no results and no sign-ups, checking only the sign-ups an upload
+  cleared, a sign-up the admin removed, or the sign-ups of a deleted upcoming session; players
+  with results are never deleted.
+- A row with both amounts blank is someone who didn't play: `parseSheetRows` skips it and the
+  `SessionEditor` leaves it out (a single blank amount still counts as 0).
+- `signUp` and `saveSession` lock the session row (`FOR UPDATE`) so sign-ups can't race an
+  upload or the 30 cap.
 - Server actions: public `signUp` in `src/app/sessions/actions.ts` (honeypot, 30 per session);
   admin-only `planSession`, `updateSessionDetails`, `removeSignup`, `saveSession` (clears the
   sign-ups) and `deleteSession` in `src/app/admin/actions.ts`.

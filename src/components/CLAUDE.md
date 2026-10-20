@@ -13,7 +13,7 @@ component per UI element; see the root `CLAUDE.md` for the breakpoint rule.
 | `Chevron`, `EmptyState`, `TIER_TEXT` | `ui.tsx` | Row chevron; empty-state panel; rarity label colours on phones | Phone list rows; empty pages; `AchievementRow` |
 | `ProgressBar` | `ui.tsx` | Progress towards a locked achievement | `AchievementRow`, `AchievementDetail` |
 | `DialogClose` | `ui.tsx` | Round close button for the ivory dialogs | `AchievementDetail`, `AchievementShowcase` dialog |
-| `SiteHeader` | `SiteHeader.tsx` | Logo, meta line (with "next game" when one is planned), nav and the "New session" button; on phones a slim row with a round plus button and no nav links | Layout (every page) |
+| `SiteHeader` | `SiteHeader.tsx` | Logo, meta line (with "next game" on desktop when one is planned), nav and the "New session" button; on phones a slim row with a round plus button and no nav links | Layout (every page) |
 | `BottomNav` | `BottomNav.tsx` | Phone-only fixed tab bar (Home, Players, Achievements), active tab in brass | Layout (every page) |
 | `Badge` | `Badge.tsx` | Achievement badge with a ring per rarity tier (uncommon is mint); sizes `sm`/`md` and responsive `row`/`showcase`/`detail` | Everywhere achievements are shown |
 | `AchievementRow` | `AchievementRow.tsx` | One achievement row: badge, title and description, winners (`group`) or unlock date (`player`), fixed-width rarity column; opens the detail | `/achievements`, player "view all" dialog |
@@ -25,7 +25,7 @@ component per UI element; see the root `CLAUDE.md` for the breakpoint rule.
 | `SessionEditor` | `SessionEditor.tsx` | Upload/edit form with preview; `results` makes it the upload for an upcoming session (file input, rows pre-filled from the sign-ups, date may start empty) | `/admin` (from data), `/admin/sessions/[id]`, upcoming `/sessions/[id]` (admin) |
 | `LoginForm` | `LoginForm.tsx` | Admin sign-in | `/admin` |
 | `DeleteSessionButton` | `DeleteSessionButton.tsx` | Confirmed session delete | `/admin`, upcoming `/sessions/[id]` (admin) |
-| `Countdown` | `Countdown.tsx` | Client clock to a UTC instant from the server: days/hours/min/sec in the serif (`hero` or `card`), then "Dealing now" / "Today" / "Waiting for results"; numbers render after mount only | `NextSessionCard`, `UpcomingSession` |
+| `Countdown` | `Countdown.tsx` | Client clock to a UTC instant from the server: days/hours/min/sec in the serif (`hero` or `card`), then "Dealing now" / "Today" / "Waiting for results"; rendered on the server at the request time (`serverNow`), so hydration matches and nothing shifts | `NextSessionCard`, `UpcomingSession` |
 | `NextSessionCard` | `NextSessionCard.tsx` | Felt card linking to the next session: date and time, note, countdown, "N players going" with `PlayerDot`s | `/` |
 | `UpcomingSession` | `UpcomingSession.tsx` | The upcoming-session page: felt hero with countdown, going list and sign-up form; for the admin the details form, delete, template download and results upload | `/sessions/[id]` |
 | `GoingList` | `GoingList.tsx` | Signed-up players with `PlayerDot`; the "×" to remove someone shows only to the admin | `UpcomingSession` |

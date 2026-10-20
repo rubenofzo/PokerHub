@@ -57,8 +57,9 @@ export async function resolvePlayer(tx: Tx, name: string): Promise<Player> {
 
 /**
  * Deletes those of the given players who have no results and are on no going list (a typo
- * in a sign-up, or someone who signed up and never played). Players with results are never
- * touched.
+ * in a sign-up, or someone who signed up and never played). Called after an upload with the
+ * sign-ups it cleared, after the admin removes a sign-up, and after an upcoming session is
+ * deleted. Players with results are never touched.
  */
 export async function deleteIdlePlayers(tx: Tx, playerIds: Iterable<number>): Promise<void> {
   const ids = [...new Set(playerIds)];

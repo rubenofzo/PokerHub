@@ -46,6 +46,7 @@ export function UpcomingSession({ session, hub, admin }: { session: Upcoming; hu
           <Countdown
             size="hero"
             startsAt={session.startsAt}
+            serverNow={hub.renderedAt}
             timeKnown={session.startTime !== null}
             className="md:w-[560px] md:flex-none"
           />

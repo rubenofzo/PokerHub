@@ -12,9 +12,9 @@ import { formatEuro, formatSigned } from "@/lib/money";
 import { achievementViews, chartData, playerColorMap, statsRows } from "@/lib/views";
 
 export default async function Dashboard() {
-  const { stats, achievements, playerById, nextSession } = await getHub();
+  const { stats, achievements, playerById, nextSession, renderedAt } = await getHub();
   const colors = playerColorMap(stats);
-  const next = nextSession && <NextSessionCard session={nextSession} colors={colors} />;
+  const next = nextSession && <NextSessionCard session={nextSession} colors={colors} now={renderedAt} />;
 
   if (stats.sessions.length === 0) {
     return next ? (

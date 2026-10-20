@@ -8,7 +8,6 @@ export const TIME_ZONE = "Europe/Amsterdam";
 
 /** After a session with a known start time starts, it reads "Dealing now" for this long. */
 export const DEALING_WINDOW_MS = 6 * 60 * 60 * 1000;
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 const wallClock = new Intl.DateTimeFormat("en-GB", {
   timeZone: TIME_ZONE,
@@ -21,9 +20,13 @@ const wallClock = new Intl.DateTimeFormat("en-GB", {
   second: "2-digit",
 });
 
+function wallParts(utcMs: number): Record<string, string> {
+  return Object.fromEntries(wallClock.formatToParts(new Date(utcMs)).map((p) => [p.type, p.value]));
+}
+
 /** Milliseconds Amsterdam is ahead of UTC at the given instant (+1h in winter, +2h in summer). */
 function zoneOffsetMs(utcMs: number): number {
-  const parts = Object.fromEntries(wallClock.formatToParts(new Date(utcMs)).map((p) => [p.type, p.value]));
+  const parts = wallParts(utcMs);
   const asUtc = Date.UTC(
     Number(parts.year),
     Number(parts.month) - 1,
@@ -82,7 +85,14 @@ export type Phase = "countdown" | "dealing" | "today" | "waiting";
 export function countdownPhase(startMs: number, nowMs: number, timeKnown: boolean): Phase {
   if (nowMs < startMs) return "countdown";
   if (timeKnown) return nowMs < startMs + DEALING_WINDOW_MS ? "dealing" : "waiting";
-  return nowMs < startMs + DAY_MS ? "today" : "waiting";
+  return nowMs < nextMidnight(startMs) ? "today" : "waiting";
+}
+
+/** The Amsterdam midnight after the day `utcMs` falls on (23, 24 or 25 hours on). */
+export function nextMidnight(utcMs: number): number {
+  const p = wallParts(utcMs);
+  const next = new Date(Date.UTC(Number(p.year), Number(p.month) - 1, Number(p.day) + 1));
+  return startInstant(next.toISOString().slice(0, 10), null)!.getTime();
 }
 
 /** "Fri 24 Oct" (with the year when asked), or "Date TBD". */

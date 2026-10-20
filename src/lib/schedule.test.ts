@@ -3,6 +3,7 @@ import {
   countdownPhase,
   DEALING_WINDOW_MS,
   formatSchedule,
+  nextMidnight,
   shortTime,
   splitDuration,
   startInstant,
@@ -60,9 +61,19 @@ describe("countdownPhase", () => {
     expect(countdownPhase(start, start + DEALING_WINDOW_MS - 1, true)).toBe("dealing");
     expect(countdownPhase(start, start + DEALING_WINDOW_MS, true)).toBe("waiting");
   });
-  it("reads today for the whole day when the time is TBD", () => {
-    expect(countdownPhase(start, start + 20 * 3600 * 1000, false)).toBe("today");
-    expect(countdownPhase(start, start + 25 * 3600 * 1000, false)).toBe("waiting");
+  it("reads today for the whole Amsterdam day when the time is TBD", () => {
+    const day = startInstant("2026-10-22", null)!.getTime();
+    expect(countdownPhase(day, day + 20 * 3600 * 1000, false)).toBe("today");
+    expect(countdownPhase(day, day + 24 * 3600 * 1000, false)).toBe("waiting");
+  });
+  it("ends today at the next midnight on a 25-hour DST day", () => {
+    // 25 Oct 2026: clocks go back, so the day runs 22:00Z on the 24th to 23:00Z on the 25th.
+    const day = startInstant("2026-10-25", null)!.getTime();
+    expect(nextMidnight(day)).toBe(Date.UTC(2026, 9, 25, 23));
+    expect(countdownPhase(day, day + 24.5 * 3600 * 1000, false)).toBe("today");
+    expect(countdownPhase(day, day + 25 * 3600 * 1000, false)).toBe("waiting");
+    // 29 Mar 2026 is 23 hours long.
+    expect(nextMidnight(startInstant("2026-03-29", null)!.getTime())).toBe(Date.UTC(2026, 2, 29, 22));
   });
 });
 

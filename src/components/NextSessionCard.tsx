@@ -10,7 +10,16 @@ const MAX_DOTS = 8;
  * Felt card at the top of home: the next session's countdown, date and time, and who is
  * going. The whole card links to the session page.
  */
-export function NextSessionCard({ session, colors }: { session: UpcomingSession; colors: Map<number, string> }) {
+export function NextSessionCard({
+  session,
+  colors,
+  now,
+}: {
+  session: UpcomingSession;
+  colors: Map<number, string>;
+  /** Request time from `getHub`, for the server-rendered countdown. */
+  now: number;
+}) {
   const n = session.going.length;
   return (
     <Link
@@ -44,7 +53,7 @@ export function NextSessionCard({ session, colors }: { session: UpcomingSession;
         </span>
       </span>
       {session.startsAt ? (
-        <Countdown startsAt={session.startsAt} timeKnown={session.startTime !== null} className="md:w-[400px] md:flex-none" />
+        <Countdown startsAt={session.startsAt} serverNow={now} timeKnown={session.startTime !== null} className="md:w-[400px] md:flex-none" />
       ) : (
         <span className="text-[13px] text-mist md:text-[15px]">Countdown starts once the date is set.</span>
       )}

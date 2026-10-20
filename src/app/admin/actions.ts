@@ -52,6 +52,15 @@ export async function saveSession(input: SaveSessionInput): Promise<SaveSessionR
 
   try {
     const sessionId = await getDb().transaction(async (tx) => {
+      if (data.sessionId !== null) {
+        // Lock the session first, so a sign-up can't slip in while its results are saved.
+        const [locked] = await tx
+          .select({ id: schema.sessions.id })
+          .from(schema.sessions)
+          .where(eq(schema.sessions.id, data.sessionId))
+          .for("update");
+        if (!locked) throw new UserError("That session no longer exists.");
+      }
       const resolve = await playerResolver(tx);
       const resolved: { playerId: number; row: (typeof data.rows)[number] }[] = [];
       for (const row of data.rows) {
@@ -63,9 +72,8 @@ export async function saveSession(input: SaveSessionInput): Promise<SaveSessionR
       }
 
       let id = data.sessionId;
-      // Players who were on this session before (signed up, or in the old results) and may
-      // now have nothing left, checked once the new results are in.
-      const before: number[] = [];
+      // Players whose sign-ups this upload clears; checked once the new results are in.
+      const signedUp: number[] = [];
       const values = { date: data.date, note: data.note || null, sourceFilename: data.sourceFilename || null };
       if (id !== null) {
         const updated = await tx
@@ -79,11 +87,8 @@ export async function saveSession(input: SaveSessionInput): Promise<SaveSessionR
           .delete(schema.signups)
           .where(eq(schema.signups.sessionId, id))
           .returning({ playerId: schema.signups.playerId });
-        const old = await tx
-          .delete(schema.results)
-          .where(eq(schema.results.sessionId, id))
-          .returning({ playerId: schema.results.playerId });
-        before.push(...signups.map((s) => s.playerId), ...old.map((r) => r.playerId));
+        await tx.delete(schema.results).where(eq(schema.results.sessionId, id));
+        signedUp.push(...signups.map((s) => s.playerId));
       } else {
         const [created] = await tx.insert(schema.sessions).values(values).returning({ id: schema.sessions.id });
         id = created.id;
@@ -98,7 +103,7 @@ export async function saveSession(input: SaveSessionInput): Promise<SaveSessionR
           buyIns: row.buyIns,
         })),
       );
-      await deleteIdlePlayers(tx, before);
+      await deleteIdlePlayers(tx, signedUp);
       return id;
     });
 
@@ -116,10 +121,16 @@ export async function deleteSession(formData: FormData): Promise<void> {
   const id = Number(formData.get("sessionId"));
   if (!Number.isInteger(id) || id <= 0) return;
   await getDb().transaction(async (tx) => {
+    const [played] = await tx
+      .select({ sessionId: schema.results.sessionId })
+      .from(schema.results)
+      .where(eq(schema.results.sessionId, id))
+      .limit(1);
     const signups = await tx.select().from(schema.signups).where(eq(schema.signups.sessionId, id));
-    const results = await tx.select().from(schema.results).where(eq(schema.results.sessionId, id));
     await tx.delete(schema.sessions).where(eq(schema.sessions.id, id));
-    await deleteIdlePlayers(tx, [...signups, ...results].map((r) => r.playerId));
+    // Only an upcoming session's sign-ups can leave someone with nothing; deleting a played
+    // session never deletes players.
+    if (!played) await deleteIdlePlayers(tx, signups.map((s) => s.playerId));
   });
   revalidatePath("/", "layout");
   redirect("/admin");

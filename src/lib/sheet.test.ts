@@ -84,16 +84,44 @@ describe("dateFromFilename", () => {
 });
 
 describe("templateCsv", () => {
+  const names = ["Tijs", "de Boer, R", 'Sam "the shark"', "Zoë"];
+
   it("round-trips through parseCsv and parseSheetRows without errors", () => {
-    const names = ["Tijs", "de Boer, R", 'Sam "the shark"', "Zoë"];
     const csv = templateCsv(names);
     expect(csv.split("\r\n")[0]).toBe("Name,Money in,Money out,Buy-ins");
-    const result = parseSheetRows(parseCsv(csv));
+    const cells = parseCsv(csv);
+    expect(cells.slice(1).map((r) => r[0])).toEqual(names);
+    // Filled in at the table; Zoë didn't show up and her row stays blank.
+    cells[1] = [cells[1][0], "10", "22,05", ""];
+    cells[2] = [cells[2][0], "5", "", "1"];
+    cells[3] = [cells[3][0], "", "7", ""];
+    const result = parseSheetRows(cells);
     expect(result.errors).toEqual([]);
     expect(result.hasBuyInsColumn).toBe(true);
-    expect(result.rows).toEqual(
-      names.map((name) => ({ name, moneyInCents: 0, moneyOutCents: 0, buyIns: null })),
-    );
+    expect(result.rows).toEqual([
+      { name: "Tijs", moneyInCents: 1000, moneyOutCents: 2205, buyIns: null },
+      { name: "de Boer, R", moneyInCents: 500, moneyOutCents: 0, buyIns: 1 },
+      { name: 'Sam "the shark"', moneyInCents: 0, moneyOutCents: 700, buyIns: null },
+    ]);
+  });
+
+  it("skips rows whose amounts are both blank, but reads one blank cell as 0", () => {
+    const result = parseSheetRows([
+      ["Name", "Money in", "Money out"],
+      ["Noor", "", ""],
+      ["Koen", 10, ""],
+    ]);
+    expect(result.errors).toEqual([]);
+    expect(result.rows).toEqual([{ name: "Koen", moneyInCents: 1000, moneyOutCents: 0, buyIns: null }]);
+  });
+
+  it("keeps names from being read as formulas", () => {
+    expect(templateCsv(["=1+1", "@x", "-5", "Tijs"]).split("\r\n").slice(1, 5)).toEqual([
+      "'=1+1,,,",
+      "'@x,,,",
+      "'-5,,,",
+      "Tijs,,,",
+    ]);
   });
 
   it("names the file after the date, or the session while the date is TBD", () => {
