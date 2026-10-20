@@ -68,3 +68,16 @@ describe("computeStats", () => {
     expect(stats.timeline[1].balances[tijsId]).toBe(1205);
   });
 });
+
+describe("computeStats with upcoming sessions", () => {
+  const upcoming = { id: 99, date: "2026-10-09", note: null, results: [] };
+  const withEmpty = computeStats(fixturePlayers, [...fixtureSessions, upcoming]);
+  const without = computeStats(fixturePlayers, fixtureSessions);
+
+  it("ignores sessions without results", () => {
+    expect(withEmpty.sessions.map((s) => s.id)).toEqual([1, 2]);
+    expect(withEmpty.sessions.map((s) => s.number)).toEqual([1, 2]);
+    expect(withEmpty.timeline).toHaveLength(3);
+    expect(withEmpty.players).toEqual(without.players);
+  });
+});

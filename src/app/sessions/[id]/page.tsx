@@ -3,29 +3,36 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AchievementDetailProvider, AchievementDetailTrigger } from "@/components/AchievementDetail";
 import { Badge } from "@/components/Badge";
+import { UpcomingSession } from "@/components/UpcomingSession";
 import { CardPanel, FeltPanel, KpiCard, Money, PageTitle, PlayerDot, SectionTitle } from "@/components/ui";
 import { TIER_LABEL } from "@/achievements/engine";
 import { isAdmin } from "@/lib/auth";
 import { getHub } from "@/lib/data";
 import { formatDate, formatPercent } from "@/lib/format";
 import { formatEuro, formatSigned } from "@/lib/money";
+import { formatSessionDate } from "@/lib/schedule";
 import { achievementViews, playerColorMap } from "@/lib/views";
 
 type Props = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const { stats } = await getHub();
+  const { stats, upcoming } = await getHub();
   const session = stats.sessions.find((s) => s.id === Number(id));
-  return { title: session ? `Session ${formatDate(session.date)}` : "Session" };
+  if (session) return { title: `Session ${formatDate(session.date)}` };
+  const next = upcoming.find((s) => s.id === Number(id));
+  return { title: next ? `Next session ${formatSessionDate(next.date)}` : "Session" };
 }
 
 export default async function SessionPage({ params }: Props) {
   const { id } = await params;
-  const { stats, achievements, playerById } = await getHub();
+  const hub = await getHub();
+  const { stats, achievements, playerById } = hub;
+  const admin = await isAdmin();
+  const upcoming = hub.upcoming.find((s) => s.id === Number(id));
+  if (upcoming) return <UpcomingSession session={upcoming} hub={hub} admin={admin} />;
   const session = stats.sessions.find((s) => s.id === Number(id));
   if (!session) notFound();
-  const admin = await isAdmin();
 
   const summaryById = new Map(achievements.summaries.map((s) => [s.definition.id, s]));
   const unlocks = achievements.recent

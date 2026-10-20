@@ -75,8 +75,11 @@ export function parseSheetRows(cells: unknown[][]): SheetParseResult {
     // Skip summary lines such as "Total".
     if (/^(total|totaal|sum|som)$/i.test(name)) return;
 
-    const moneyIn = parseAmountToCents(row[columns.in!] ?? 0);
-    const moneyOut = parseAmountToCents(row[columns.out!] ?? 0);
+    // A name with both amounts blank is someone who didn't play (a template row left empty).
+    if (isBlank(row[columns.in!]) && isBlank(row[columns.out!])) return;
+
+    const moneyIn = parseAmount(row[columns.in!]);
+    const moneyOut = parseAmount(row[columns.out!]);
     if (moneyIn === null || moneyOut === null || moneyIn < 0 || moneyOut < 0) {
       errors.push(`Row ${line} (${name}): money in and out must be amounts of 0 or more.`);
       return;
@@ -99,6 +102,35 @@ export function parseSheetRows(cells: unknown[][]): SheetParseResult {
 
   if (rows.length === 0 && errors.length === 0) errors.push("The sheet has no player rows.");
   return { rows, errors, hasBuyInsColumn: columns.buyIns !== undefined };
+}
+
+function isBlank(cell: unknown): boolean {
+  return cell == null || (typeof cell === "string" && cell.trim() === "");
+}
+
+/** A single empty amount cell counts as 0 (e.g. nothing cashed out). */
+function parseAmount(cell: unknown): number | null {
+  return isBlank(cell) ? 0 : parseAmountToCents(cell);
+}
+
+/** Header of the CSV template, in the order parseSheetRows reads best. */
+export const TEMPLATE_HEADER = ["Name", "Money in", "Money out", "Buy-ins"];
+
+function csvField(value: string): string {
+  // A leading ' keeps spreadsheet apps from reading the name as a formula.
+  const safe = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+  return /[",\r\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
+}
+
+/** A CSV with one row per name and the amounts left empty, to fill in at the table. */
+export function templateCsv(names: string[]): string {
+  const lines = [TEMPLATE_HEADER.join(","), ...names.map((n) => `${csvField(n)},,,`)];
+  return `${lines.join("\r\n")}\r\n`;
+}
+
+/** pokerhub-2026-10-24.csv, or pokerhub-session-12.csv while the date is TBD. */
+export function templateFilename(sessionId: number, date: string | null): string {
+  return date ? `pokerhub-${date}.csv` : `pokerhub-session-${sessionId}.csv`;
 }
 
 /** Minimal CSV reader: detects ; , or tab as separator and handles quoted fields. */

@@ -2,9 +2,11 @@
 
 # PokerHub
 
-A small dashboard for our poker nights. An admin uploads a spreadsheet per session; every page
-then shows running balances, stats and Steam-style achievements. Public pages are read-only;
-only the admin (one shared password, `ADMIN_PASSWORD`) can upload, edit or delete sessions.
+A small dashboard for our poker nights. An admin plans the next session, people sign up for it,
+and after the game the admin uploads a spreadsheet with the results; every page then shows
+running balances, stats and Steam-style achievements. Public pages are read-only apart from the
+sign-up form; only the admin (one shared password, `ADMIN_PASSWORD`) can plan, upload, edit or
+delete sessions and take someone off a going list.
 
 Next.js 16 (App Router, server components), TypeScript, Tailwind 4, Drizzle on Postgres,
 Recharts. Everything is recalculated from the session history on each request (`getHub()` in
@@ -14,14 +16,39 @@ Recharts. Everything is recalculated from the session history on each request (`
 
 | Route | File | Shows |
 |---|---|---|
-| `/` | `src/app/page.tsx` | KPIs, balance chart, leaderboard, recent sessions, latest achievements, all-stats table |
+| `/` | `src/app/page.tsx` | Next session card (when one is planned), KPIs, balance chart, leaderboard, recent sessions, latest achievements, all-stats table |
 | `/players` | `src/app/players/page.tsx` | Everyone in leaderboard order (list on phones, cards on desktop) |
-| `/players/[slug]` | `src/app/players/[slug]/page.tsx` | One player: KPIs (hero card on phones), stat tiles, achievement showcase, chart, sessions |
-| `/sessions/[id]` | `src/app/sessions/[id]/page.tsx` | One session: KPIs, results, achievements unlocked that night |
+| `/players/[slug]` | `src/app/players/[slug]/page.tsx` | One player: KPIs (hero card on phones), stat tiles, achievement showcase, chart, sessions; "No games yet" page (`NoGamesYet`) for someone who only signed up |
+| `/sessions/[id]` | `src/app/sessions/[id]/page.tsx` | Played session: KPIs, results, achievements unlocked that night. Upcoming session (`UpcomingSession`): countdown, going list, sign-up form; for the admin also edit details, delete, results upload and CSV template |
+| `/sessions/[id]/template` | `src/app/sessions/[id]/template/route.ts` | Admin only: CSV template for an upcoming session (one row per sign-up, amounts empty) |
 | `/achievements` | `src/app/achievements/page.tsx` | Every achievement with filter/sort, rarity and winners |
-| `/admin`, `/admin/sessions/[id]` | `src/app/admin/` | Sign-in, upload, edit and delete sessions (not part of the phone redesign) |
+| `/admin`, `/admin/sessions/[id]` | `src/app/admin/` | Sign-in; "New session" with two tabs, Plan a session and Create session from data (`?from=data`); upcoming and played session lists; edit played sessions (upcoming ones redirect to their page) |
 
 `src/app/layout.tsx` wraps every page with `SiteHeader` and the phone-only `BottomNav`.
+
+## Upcoming sessions and sign-ups
+
+- A session is **upcoming** while it has no results and **played** once it has any (no status
+  column). `sessions.date` is null while the date is TBD, `sessions.start_time` null while the
+  time is TBD; played sessions always have a date. Sign-ups live in `signups`.
+- `getHub()` feeds only played sessions to `computeStats` (which also ignores empty ones), so
+  numbering, attendance and achievements skip upcoming sessions. It also returns `upcoming`
+  (soonest first, TBD dates last, each with its `going` players and `startsAt` instant) and
+  `nextSession` (the soonest that hasn't finished).
+- Times are Europe/Amsterdam. `src/lib/schedule.ts` turns date + time into the UTC instant the
+  `Countdown` runs to (start of the day when the time is TBD), and formats "Sat 24 Oct · 20:00".
+- Names match the same way everywhere through `playerResolver` / `resolvePlayer` in
+  `src/lib/players.ts` (normalized name, aliases, else a new player). `deleteIdlePlayers`
+  removes players with no results and no sign-ups, checking only the sign-ups an upload
+  cleared, a sign-up the admin removed, or the sign-ups of a deleted upcoming session; players
+  with results are never deleted.
+- A row with both amounts blank is someone who didn't play: `parseSheetRows` skips it and the
+  `SessionEditor` leaves it out (a single blank amount still counts as 0).
+- `signUp` and `saveSession` lock the session row (`FOR UPDATE`) so sign-ups can't race an
+  upload or the 30 cap.
+- Server actions: public `signUp` in `src/app/sessions/actions.ts` (honeypot, 30 per session);
+  admin-only `planSession`, `updateSessionDetails`, `removeSignup`, `saveSession` (clears the
+  sign-ups) and `deleteSession` in `src/app/admin/actions.ts`.
 
 ## Where the UI lives
 
@@ -62,6 +89,8 @@ npm run dev              # http://localhost:3000
 Before committing: `npm test` (stats and achievement engine), `npm run lint`,
 `npm run typecheck`, and `npm run build` (runs migrations first, so it needs DATABASE_URL).
 For UI changes, check 390px and 1440px screenshots and that desktop is unchanged.
+Migrations: change `src/db/schema.ts`, then `npm run db:generate -- --name <what>` writes the
+SQL into `drizzle/`, which `scripts/migrate.mjs` applies on the next build.
 
 ## Adding an achievement
 

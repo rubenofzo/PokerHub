@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { AchievementShowcase } from "@/components/AchievementShowcase";
 import { BalanceChart } from "@/components/BalanceChart";
 import { CardPanel, FeltPanel, KpiCard, Money, PageTitle, PlayerDot, SectionTitle } from "@/components/ui";
+import { NoGamesYet } from "@/components/NoGamesYet";
 import { getHub } from "@/lib/data";
 import { formatDate, formatPercent } from "@/lib/format";
 import { formatEuro, formatSigned } from "@/lib/money";
@@ -19,9 +20,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function PlayerPage({ params }: Props) {
   const { slug } = await params;
-  const { stats, achievements } = await getHub();
+  const { stats, achievements, allPlayers, upcoming } = await getHub();
   const me = stats.players.find((p) => p.player.slug === slug);
-  if (!me) notFound();
+  if (!me) {
+    // Signed up but never played: a page with their upcoming games and no stats.
+    const player = allPlayers.find((p) => p.slug === slug);
+    const going = player ? upcoming.filter((s) => s.going.some((g) => g.id === player.id)) : [];
+    if (!player || going.length === 0) notFound();
+    return <NoGamesYet name={player.name} sessions={going} />;
+  }
 
   const chart = chartData(stats, [me]);
   const color = playerColorMap(stats).get(me.player.id);

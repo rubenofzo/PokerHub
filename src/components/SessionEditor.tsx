@@ -14,28 +14,41 @@ type Alias = { alias: string; playerId: number };
 type Match = number | "new" | "auto";
 type EditorRow = { key: number; name: string; moneyIn: string; moneyOut: string; buyIns: string; match: Match };
 
+/** Both amounts empty: a sign-up who didn't play. Such rows are left out when saving. */
+const isBlankRow = (r: EditorRow) => r.moneyIn.trim() === "" && r.moneyOut.trim() === "";
+
 export type EditorInitial = {
   sessionId: number;
-  date: string;
+  /** Null for an upcoming session whose date is still TBD: the field starts empty. */
+  date: string | null;
   note: string | null;
-  rows: { name: string; moneyInCents: number; moneyOutCents: number; buyIns: number | null; playerId: number }[];
+  /** Amounts are null for a row pre-filled from a sign-up (the input starts empty). */
+  rows: { name: string; moneyInCents: number | null; moneyOutCents: number | null; buyIns: number | null; playerId: number }[];
 };
 
 let nextKey = 1;
-const centsToInput = (c: number) => (c / 100).toFixed(2);
+const centsToInput = (c: number | null) => (c === null ? "" : (c / 100).toFixed(2));
 const today = () => new Date().toISOString().slice(0, 10);
 
+/**
+ * Upload or edit form with a live preview. Without `initial` it creates a session from a
+ * sheet. With `initial` it edits that session; `results` marks it as the upload for an
+ * upcoming session (file input shown, rows pre-filled from the sign-ups).
+ */
 export function SessionEditor({
   players,
   aliases,
   initial,
+  results = false,
 }: {
   players: PlayerOption[];
   aliases: Alias[];
   initial?: EditorInitial;
+  results?: boolean;
 }) {
   const router = useRouter();
-  const [date, setDate] = useState(initial?.date ?? today());
+  const withFile = !initial || results;
+  const [date, setDate] = useState(initial ? (initial.date ?? "") : today());
   const [note, setNote] = useState(initial?.note ?? "");
   const [filename, setFilename] = useState<string | null>(null);
   const [rows, setRows] = useState<EditorRow[]>(
@@ -68,7 +81,7 @@ export function SessionEditor({
   };
 
   const preview = useMemo(() => {
-    const parsed = rows.map((r) => ({
+    const parsed = rows.filter((r) => !isBlankRow(r)).map((r) => ({
       row: r,
       in: parseAmountToCents(r.moneyIn === "" ? "0" : r.moneyIn),
       out: parseAmountToCents(r.moneyOut === "" ? "0" : r.moneyOut),
@@ -85,12 +98,14 @@ export function SessionEditor({
       .sort((a, b) => a.displayName.localeCompare(b.displayName, "nl", { sensitivity: "base" }))
       .map((p) => p.row.key);
     const shares = spreadImbalance(imbalance, order);
-    return { parsed, valid, totalIn, totalOut, imbalance, shares };
+    const parsedByKey = new Map(parsed.map((p) => [p.row.key, p]));
+    return { parsed, parsedByKey, valid, totalIn, totalOut, imbalance, shares, blank: rows.length - parsed.length };
   }, [rows, lookup, playerName]);
 
   const duplicates = useMemo(() => {
     const seen = new Map<string, number>();
     for (const r of rows) {
+      if (isBlankRow(r)) continue;
       const id = resolve(r);
       const key = id !== null ? `id:${id}` : `new:${normalizeName(r.name)}`;
       seen.set(key, (seen.get(key) ?? 0) + 1);
@@ -103,7 +118,8 @@ export function SessionEditor({
     setError(null);
     setFilename(file.name);
     const fromName = dateFromFilename(file.name);
-    if (fromName) setDate(fromName);
+    // The filename only fills an empty date; it never overrides a session's own date.
+    if (fromName && (!initial || !date)) setDate(fromName);
     try {
       let cells: unknown[][];
       if (/\.csv$/i.test(file.name) || file.type === "text/csv") {
@@ -135,10 +151,12 @@ export function SessionEditor({
 
   function onSave() {
     setError(null);
+    if (!date) return setError("Pick the session date first.");
+    if (preview.parsed.length === 0) return setError("Fill in the amounts of at least one player.");
     if (!preview.valid) return setError("Fix the amounts marked in red first.");
-    if (rows.some((r) => !r.name.trim())) return setError("Every row needs a name.");
+    if (preview.parsed.some((p) => !p.row.name.trim())) return setError("Every row needs a name.");
     if (duplicates.size) return setError("A player appears twice. Merge those rows first.");
-    const buyInsValid = rows.every((r) => r.buyIns === "" || /^\d+$/.test(r.buyIns.trim()));
+    const buyInsValid = preview.parsed.every((p) => p.row.buyIns === "" || /^\d+$/.test(p.row.buyIns.trim()));
     if (!buyInsValid) return setError("Buy-ins must be whole numbers (or empty to estimate).");
 
     startTransition(async () => {
@@ -170,7 +188,7 @@ export function SessionEditor({
   return (
     <div className="flex flex-col gap-5 text-ink">
       <div className="flex flex-wrap items-end gap-4">
-        {!initial && (
+        {withFile && (
           <label className="flex min-w-[240px] flex-1 flex-col gap-1.5 text-sm font-bold text-ink-muted">
             Spreadsheet (.xlsx or .csv)
             <input
@@ -191,7 +209,7 @@ export function SessionEditor({
         </label>
       </div>
 
-      {!initial && (
+      {withFile && (
         <p className="text-sm text-ink-muted">
           Columns: <b>Name</b>, <b>Money in</b>, <b>Money out</b>, and optionally <b>Buy-ins</b>. A date like
           2026-10-16 in the filename fills in the date. Without a Buy-ins column, buy-ins are estimated as money in ÷ €5.
@@ -207,7 +225,7 @@ export function SessionEditor({
       )}
 
       {rows.length > 0 && (
-        <div className="overflow-x-auto">
+        <div className="relative overflow-x-auto">
           <table className="w-full min-w-[820px] text-[15px]">
             <thead>
               <tr className="text-left text-xs font-bold tracking-[0.12em] text-ink-muted uppercase">
@@ -221,11 +239,15 @@ export function SessionEditor({
               </tr>
             </thead>
             <tbody>
-              {preview.parsed.map(({ row, in: inC, out: outC }) => {
+              {rows.map((row) => {
+                // Blank rows (no amounts yet) show as empty and count for nothing.
+                const p = preview.parsedByKey.get(row.key);
+                const inC = p ? p.in : 0;
+                const outC = p ? p.out : 0;
                 const resolved = resolve(row);
                 const dupKey = resolved !== null ? `id:${resolved}` : `new:${normalizeName(row.name)}`;
                 const share = preview.shares.get(row.key) ?? 0;
-                const net = inC !== null && outC !== null ? outC - inC + share : null;
+                const net = p && inC !== null && outC !== null ? outC - inC + share : null;
                 return (
                   <tr key={row.key} className={`border-t border-ivory-line ${duplicates.has(dupKey) ? "bg-chip/10" : ""}`}>
                     <td className="py-2 pr-2">
@@ -330,7 +352,14 @@ export function SessionEditor({
         <p className="rounded-xl bg-brass/25 px-4 py-3 text-sm">
           Money in and out differ by <b>{formatEuro(Math.abs(preview.imbalance))}</b> (
           {preview.imbalance > 0 ? "more went in than came out" : "more came out than went in"}). It will be split
-          evenly over the {rows.length} players, which is already included in the Net column.
+          evenly over the {preview.parsed.length} players, which is already included in the Net column.
+        </p>
+      )}
+
+      {preview.blank > 0 && (
+        <p className="rounded-xl bg-ivory-line/60 px-4 py-3 text-sm text-ink-muted">
+          {preview.blank} {preview.blank === 1 ? "player" : "players"} without amounts{" "}
+          {preview.blank === 1 ? "is" : "are"} left out (didn&rsquo;t play). Fill in 0 for someone who played and broke even.
         </p>
       )}
 
@@ -343,7 +372,7 @@ export function SessionEditor({
           onClick={onSave}
           className="min-h-12 rounded-full bg-felt px-7 font-bold text-ivory hover:bg-felt-light disabled:opacity-50"
         >
-          {pending ? "Saving…" : initial ? "Save changes" : "Save session"}
+          {pending ? "Saving…" : results ? "Save results" : initial ? "Save changes" : "Save session"}
         </button>
       </div>
     </div>

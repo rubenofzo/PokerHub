@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseAmountToCents } from "./money";
-import { dateFromFilename, parseCsv, parseSheetRows } from "./sheet";
+import { dateFromFilename, parseCsv, parseSheetRows, templateCsv, templateFilename } from "./sheet";
 
 describe("parseAmountToCents", () => {
   it.each([
@@ -80,5 +80,53 @@ describe("dateFromFilename", () => {
     expect(dateFromFilename("poker_16-10-2026.csv")).toBe("2026-10-16");
     expect(dateFromFilename("poker.xlsx")).toBeNull();
     expect(dateFromFilename("2026-02-31.xlsx")).toBeNull();
+  });
+});
+
+describe("templateCsv", () => {
+  const names = ["Tijs", "de Boer, R", 'Sam "the shark"', "Zoë"];
+
+  it("round-trips through parseCsv and parseSheetRows without errors", () => {
+    const csv = templateCsv(names);
+    expect(csv.split("\r\n")[0]).toBe("Name,Money in,Money out,Buy-ins");
+    const cells = parseCsv(csv);
+    expect(cells.slice(1).map((r) => r[0])).toEqual(names);
+    // Filled in at the table; Zoë didn't show up and her row stays blank.
+    cells[1] = [cells[1][0], "10", "22,05", ""];
+    cells[2] = [cells[2][0], "5", "", "1"];
+    cells[3] = [cells[3][0], "", "7", ""];
+    const result = parseSheetRows(cells);
+    expect(result.errors).toEqual([]);
+    expect(result.hasBuyInsColumn).toBe(true);
+    expect(result.rows).toEqual([
+      { name: "Tijs", moneyInCents: 1000, moneyOutCents: 2205, buyIns: null },
+      { name: "de Boer, R", moneyInCents: 500, moneyOutCents: 0, buyIns: 1 },
+      { name: 'Sam "the shark"', moneyInCents: 0, moneyOutCents: 700, buyIns: null },
+    ]);
+  });
+
+  it("skips rows whose amounts are both blank, but reads one blank cell as 0", () => {
+    const result = parseSheetRows([
+      ["Name", "Money in", "Money out"],
+      ["Noor", "", ""],
+      ["Koen", 10, ""],
+    ]);
+    expect(result.errors).toEqual([]);
+    expect(result.rows).toEqual([{ name: "Koen", moneyInCents: 1000, moneyOutCents: 0, buyIns: null }]);
+  });
+
+  it("keeps names from being read as formulas", () => {
+    expect(templateCsv(["=1+1", "@x", "-5", "Tijs"]).split("\r\n").slice(1, 5)).toEqual([
+      "'=1+1,,,",
+      "'@x,,,",
+      "'-5,,,",
+      "Tijs,,,",
+    ]);
+  });
+
+  it("names the file after the date, or the session while the date is TBD", () => {
+    expect(templateFilename(7, "2026-10-24")).toBe("pokerhub-2026-10-24.csv");
+    expect(dateFromFilename(templateFilename(7, "2026-10-24"))).toBe("2026-10-24");
+    expect(templateFilename(7, null)).toBe("pokerhub-session-7.csv");
   });
 });

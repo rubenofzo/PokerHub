@@ -12,7 +12,9 @@ export const metadata: Metadata = { title: "Edit session" };
 export default async function EditSessionPage({ params }: { params: Promise<{ id: string }> }) {
   if (!(await isAdmin())) redirect("/admin");
   const { id } = await params;
-  const { allPlayers, aliases, stats, playerById } = await getHub();
+  const { allPlayers, aliases, stats, playerById, upcoming } = await getHub();
+  // Upcoming sessions are edited and uploaded on their own page.
+  if (upcoming.some((s) => s.id === Number(id))) redirect(`/sessions/${id}`);
   const session = stats.sessions.find((s) => s.id === Number(id));
   if (!session) notFound();
 
