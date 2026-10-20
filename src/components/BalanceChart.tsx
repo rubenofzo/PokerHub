@@ -33,8 +33,9 @@ export function BalanceChart({
     });
 
   return (
-    <div className="flex flex-col gap-4">
-      <div style={{ height }} className="w-full">
+    <div className="flex flex-col gap-2.5 md:gap-4">
+      {/* Shorter on phones; `height` is the desktop height. */}
+      <div style={{ "--chart-h": `${height}px` } as React.CSSProperties} className="h-[220px] w-full md:h-(--chart-h)">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={points} margin={{ top: 10, right: 16, bottom: 0, left: 0 }}>
             <CartesianGrid stroke="#2e6a55" vertical={false} />
@@ -73,7 +74,12 @@ export function BalanceChart({
         </ResponsiveContainer>
       </div>
       {showLegend && (
-        <div className="flex flex-wrap gap-2" aria-label="Show or hide players">
+        <div>
+        {/* Phones: one swipeable row of names, bleeding to the panel edges. */}
+        <div
+          className="no-scrollbar -mx-3.5 flex flex-nowrap gap-1.5 overflow-x-auto px-3.5 md:mx-0 md:flex-wrap md:gap-2 md:overflow-visible md:px-0"
+          aria-label="Show or hide players"
+        >
           {series.map((s) => {
             const on = !hidden.has(s.key);
             return (
@@ -86,7 +92,7 @@ export function BalanceChart({
                 onMouseLeave={() => setFocus(null)}
                 onFocus={() => setFocus(s.key)}
                 onBlur={() => setFocus(null)}
-                className="inline-flex min-h-9 items-center gap-2 rounded-full border px-3.5 text-sm font-semibold transition-colors"
+                className="inline-flex min-h-8 flex-none items-center gap-2 rounded-full border px-3 text-[12.5px] font-semibold transition-colors md:min-h-9 md:px-3.5 md:text-sm"
                 style={{
                   borderColor: s.color,
                   background: on ? s.color : "transparent",
@@ -97,6 +103,8 @@ export function BalanceChart({
               </button>
             );
           })}
+        </div>
+        <p className="mt-2 text-[11px] text-mist md:hidden">Swipe the names, tap to show or hide a line</p>
         </div>
       )}
     </div>

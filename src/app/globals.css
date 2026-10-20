@@ -50,3 +50,11 @@ dialog::backdrop {
 .tabular {
   font-variant-numeric: tabular-nums;
 }
+
+/* Horizontal scroll strips on phones: swipeable, without a visible scrollbar. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

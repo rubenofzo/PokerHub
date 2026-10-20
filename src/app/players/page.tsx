@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { EmptyState, Money } from "@/components/ui";
+import { CardPanel, Chevron, EmptyState, Money, PageTitle, PlayerDot } from "@/components/ui";
 import { getHub } from "@/lib/data";
-import { formatDate, formatPercent, playerColors } from "@/lib/format";
+import { formatDate, formatPercent } from "@/lib/format";
+import { playerColorMap } from "@/lib/views";
 
 export const metadata: Metadata = { title: "Players" };
 
@@ -14,20 +15,50 @@ export default async function PlayersPage() {
   }
 
   // Same colours as the balance chart, so a player is recognisable across pages.
-  const alphabetical = [...stats.players].sort((a, b) => a.player.name.localeCompare(b.player.name));
-  const colors = playerColors(alphabetical.map((p) => p.player.id));
+  const colors = playerColorMap(stats);
   const totalAchievements = achievements.summaries.length;
+  const badges = (playerId: number) => (achievements.byPlayer.get(playerId) ?? []).filter((a) => a.unlocked).length;
 
   return (
-    <main className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="font-display text-5xl">Players</h1>
-        <p className="text-mist">Everyone who has sat at the table, in leaderboard order. Pick one for their full record.</p>
+    <main className="flex flex-col gap-3.5 md:gap-6">
+      <div className="flex flex-col gap-1.5 md:gap-1">
+        <PageTitle>Players</PageTitle>
+        <p className="text-[12.5px] text-mist md:text-base">
+          <span className="md:hidden">In leaderboard order. Tap one for their full record.</span>
+          <span className="hidden md:inline">
+            Everyone who has sat at the table, in leaderboard order. Pick one for their full record.
+          </span>
+        </p>
       </div>
 
-      <ul className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-5">
+      {/* Phones: one ivory list. Desktop: a grid of cards. */}
+      <CardPanel list className="md:hidden">
+        <ul>
+          {stats.players.map((p) => (
+            <li key={p.player.id} className="border-t border-ivory-line first:border-0">
+              <Link href={`/players/${p.player.slug}`} className="flex h-[70px] items-center gap-3 text-ink">
+                <span className="tabular w-5 flex-none font-display text-[17px] text-brass-dark">{p.rank}</span>
+                <span className="flex min-w-0 flex-1 flex-col gap-[3px]">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <PlayerDot color={colors.get(p.player.id)} />
+                    <span className="truncate font-display text-[19px] leading-none">{p.player.name}</span>
+                  </span>
+                  <span className="tabular truncate text-[11.5px] text-ink-muted">
+                    {p.sessionsPlayed} {p.sessionsPlayed === 1 ? "session" : "sessions"} · {formatPercent(p.winRate)} won ·{" "}
+                    {badges(p.player.id)}/{totalAchievements} badges
+                  </span>
+                </span>
+                <Money cents={p.netCents} className="text-base" />
+                <Chevron className="text-ink-muted/70" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </CardPanel>
+
+      <ul className="hidden grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-5 md:grid">
         {stats.players.map((p) => {
-          const unlocked = (achievements.byPlayer.get(p.player.id) ?? []).filter((a) => a.unlocked).length;
+          const unlocked = badges(p.player.id);
           const last = p.history.at(-1);
           return (
             <li key={p.player.id}>
@@ -37,11 +68,7 @@ export default async function PlayersPage() {
               >
                 <span className="flex items-start justify-between gap-3">
                   <span className="flex min-w-0 items-center gap-2.5">
-                    <span
-                      aria-hidden
-                      className="h-3 w-3 flex-none rounded-full ring-1 ring-ink/20"
-                      style={{ backgroundColor: colors.get(p.player.id) }}
-                    />
+                    <PlayerDot color={colors.get(p.player.id)} size={12} />
                     <span className="truncate font-display text-[28px] leading-none">{p.player.name}</span>
                   </span>
                   <span className="flex-none font-display text-xl text-brass-dark">#{p.rank}</span>
