@@ -89,7 +89,7 @@ export default async function Dashboard() {
         <CardPanel className="flex min-w-0 flex-[1_1_400px] flex-col pb-1.5 md:gap-2 md:pb-7">
           <div id="leaderboard" className="flex scroll-mt-6 items-baseline justify-between">
             <SectionTitle>Leaderboard</SectionTitle>
-            <a href="#all-stats" className="text-xs font-semibold text-brass-dark md:text-sm">
+            <a href="#all-stats" className="-my-3 py-3 pl-3 text-xs font-semibold text-brass-dark md:my-0 md:py-0 md:pl-0 md:text-sm">
               All stats ↓
             </a>
           </div>
@@ -162,12 +162,19 @@ export default async function Dashboard() {
         <section className="flex min-w-0 flex-[1_1_420px] flex-col gap-2.5 md:gap-3.5">
           <div className="flex items-baseline justify-between">
             <SectionTitle>Latest achievements</SectionTitle>
-            <Link href="/achievements" className="text-xs font-semibold text-brass md:text-sm">
+            <Link
+              href="/achievements"
+              className="-my-3 py-3 pl-3 text-xs font-semibold text-brass md:my-0 md:py-0 md:pl-0 md:text-sm"
+            >
               All<span className="hidden md:inline"> achievements</span> →
             </Link>
           </div>
           {/* Phones: a swipeable strip of small cards. Desktop: a grid. Each opens the detail. */}
-          <AchievementDetailProvider achievements={achievementViews(stats, achievements)}>
+          <AchievementDetailProvider
+            achievements={achievementViews(stats, achievements).filter((v) =>
+              latestUnlocks.some((u) => u.achievementId === v.id),
+            )}
+          >
             <ul className="no-scrollbar -mx-4 flex gap-2.5 overflow-x-auto px-4 md:mx-0 md:grid md:grid-cols-[repeat(auto-fit,minmax(200px,1fr))] md:gap-3 md:overflow-visible md:px-0">
               {latestUnlocks.map((u) => {
                 const summary = summaryById.get(u.achievementId)!;

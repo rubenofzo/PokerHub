@@ -6,6 +6,7 @@ import { formatPercent } from "@/lib/format";
 import { AchievementDetailProvider, AchievementDetailTrigger, type AchievementView } from "./AchievementDetail";
 import { AchievementRow } from "./AchievementRow";
 import { Badge } from "./Badge";
+import { DialogClose, FeltPanel } from "./ui";
 
 type Sort = "rarest" | "common" | "recent" | "name";
 type Filter = "all" | "earned" | "locked";
@@ -47,7 +48,7 @@ export function AchievementShowcase({ items, playerName }: { items: AchievementV
 
   return (
     <AchievementDetailProvider achievements={items}>
-      <section className="flex flex-col gap-3.5 rounded-2xl border border-line bg-felt-panel px-3.5 py-4 md:gap-4 md:rounded-[20px] md:p-7">
+      <FeltPanel className="flex flex-col gap-3.5 md:gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="font-display text-[22px] md:text-3xl">
             Achievements{" "}
@@ -113,22 +114,15 @@ export function AchievementShowcase({ items, playerName }: { items: AchievementV
           onClick={(e) => {
             if (e.target === dialog.current) dialog.current?.close();
           }}
-          className="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none bg-ivory p-0 text-ink md:m-auto md:h-auto md:max-h-[85vh] md:w-[min(720px,calc(100vw-32px))] md:rounded-[20px] md:shadow-2xl"
+          className="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none bg-ivory p-0 text-ink md:m-auto md:h-fit md:max-h-[85vh] md:w-[min(720px,calc(100vw-32px))] md:rounded-[20px] md:shadow-2xl"
         >
-          <div className="flex h-full flex-col md:max-h-[85vh]">
+          <div className="flex h-full flex-col md:h-auto md:max-h-[85vh]">
             <div className="flex flex-col gap-3 border-b border-ivory-line px-4 pt-[calc(16px+env(safe-area-inset-top))] pb-4 md:p-6">
               <div className="flex items-start justify-between gap-4">
                 <h2 id="all-achievements-title" className="font-display text-[26px] leading-tight md:text-3xl">
                   {playerName}&rsquo;s achievements
                 </h2>
-                <button
-                  type="button"
-                  aria-label="Close"
-                  onClick={() => dialog.current?.close()}
-                  className="flex h-11 w-11 flex-none items-center justify-center rounded-full text-2xl text-ink-muted hover:bg-ivory-line"
-                >
-                  ×
-                </button>
+                <DialogClose onClick={() => dialog.current?.close()} />
               </div>
               <div className="flex flex-wrap gap-3 text-sm">
                 <label className="flex items-center gap-2 font-semibold text-ink-muted">
@@ -165,7 +159,7 @@ export function AchievementShowcase({ items, playerName }: { items: AchievementV
             </ul>
           </div>
         </dialog>
-      </section>
+      </FeltPanel>
     </AchievementDetailProvider>
   );
 }

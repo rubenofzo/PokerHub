@@ -5,7 +5,7 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { TIER_LABEL, type RarityTier } from "@/achievements/engine";
 import { formatPercent } from "@/lib/format";
 import { Badge } from "./Badge";
-import { PlayerDot } from "./ui";
+import { DialogClose, PlayerDot, ProgressBar } from "./ui";
 
 export type AchievementWinner = {
   playerId: number;
@@ -119,32 +119,12 @@ function AchievementDetail({ achievement, onClose }: { achievement: AchievementV
                 <b className="text-ink">{formatPercent(a.rarity)}</b> of players · {TIER_LABEL[a.tier]}
               </p>
             </div>
-            <button
-              type="button"
-              aria-label="Close"
-              onClick={() => dialog.current?.close()}
-              className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-ivory-line/60 text-ink hover:bg-ivory-line"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
-                <path d="M6 6l12 12" />
-                <path d="M18 6L6 18" />
-              </svg>
-            </button>
+            <DialogClose onClick={() => dialog.current?.close()} />
           </div>
 
           <p className="mt-3.5 text-sm leading-normal md:text-base">{a.secret ? "Hidden achievement" : a.description}</p>
 
-          {a.locked && a.progress && (
-            <p className="mt-3 flex items-center gap-2 text-xs font-semibold text-ink-muted">
-              <span className="h-1.5 w-28 overflow-hidden rounded-full bg-ivory-line">
-                <span
-                  className="block h-full bg-brass-dark"
-                  style={{ width: `${Math.min(1, a.progress[0] / a.progress[1]) * 100}%` }}
-                />
-              </span>
-              {a.progress[0]} / {a.progress[1]}
-            </p>
-          )}
+          {a.locked && a.progress && <ProgressBar value={a.progress} className="mt-3" />}
 
           {!a.secret && (
             <>

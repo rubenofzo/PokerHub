@@ -9,15 +9,17 @@ component per UI element; see the root `CLAUDE.md` for the breakpoint rule.
 | `SectionTitle`, `PageTitle` | `ui.tsx` | Section (h2) and page (h1) headings, smaller on phones | All pages |
 | `KpiCard` | `ui.tsx` | Key number on an ivory card, compact on phones; `grouped` makes it one cell of a shared 2×2 card on phones | `/`, `/players/[slug]` (desktop), `/sessions/[id]` |
 | `Money` | `ui.tsx` | Signed amount coloured for card or felt; `display` sets it in the serif | Everywhere amounts are shown |
-| `PlayerDot` | `ui.tsx` | Circle in the player's colour (from `playerColorMap`) | Leaderboard, `/players`, player hero, session results, achievement winners and detail |
+| `PlayerDot` | `ui.tsx` | Circle in the player's colour (from `playerColorMap`), with a ring so light colours show on ivory (`on="felt"` for dark panels) | Leaderboard, `/players`, player hero, session results, achievement winners and detail |
 | `Chevron`, `EmptyState`, `TIER_TEXT` | `ui.tsx` | Row chevron; empty-state panel; rarity label colours on phones | Phone list rows; empty pages; `AchievementRow` |
+| `ProgressBar` | `ui.tsx` | Progress towards a locked achievement | `AchievementRow`, `AchievementDetail` |
+| `DialogClose` | `ui.tsx` | Round close button for the ivory dialogs | `AchievementDetail`, `AchievementShowcase` dialog |
 | `SiteHeader` | `SiteHeader.tsx` | Logo, meta line, nav; on phones a slim row with a round upload button and no nav links | Layout (every page) |
 | `BottomNav` | `BottomNav.tsx` | Phone-only fixed tab bar (Table, Players, Achievements), active tab in brass | Layout (every page) |
-| `Badge` | `Badge.tsx` | Achievement badge with a ring per rarity tier (uncommon is mint); sizes `sm`/`md`/`lg` and responsive `row`/`showcase`/`detail` | Everywhere achievements are shown |
+| `Badge` | `Badge.tsx` | Achievement badge with a ring per rarity tier (uncommon is mint); sizes `sm`/`md` and responsive `row`/`showcase`/`detail` | Everywhere achievements are shown |
 | `AchievementRow` | `AchievementRow.tsx` | One achievement row: badge, title and description, winners (`group`) or unlock date (`player`), fixed-width rarity column; opens the detail | `/achievements`, player "view all" dialog |
-| `AchievementDetailProvider`, `AchievementDetailTrigger` | `AchievementDetail.tsx` | Holds the achievement detail `<dialog>` (bottom sheet on phones, centred modal on desktop) and buttons that open it; also defines `AchievementView` | `/achievements`, `/` latest achievements, player showcase and dialog, `/sessions/[id]` (phones) |
+| `AchievementDetailProvider`, `AchievementDetailTrigger` | `AchievementDetail.tsx` | Holds the achievement detail `<dialog>` (bottom sheet on phones, centred modal on desktop) and buttons that open it; also defines `AchievementView` (hidden, locked ones arrive redacted from `views.ts`) | `/achievements`, `/` latest achievements, player showcase and dialog, `/sessions/[id]` (phones) |
 | `AchievementList` | `AchievementList.tsx` | Filter (All/Unlocked/Locked) and sort (Rarest/Most common) controls plus the list of `AchievementRow`s | `/achievements` |
-| `AchievementShowcase` | `AchievementShowcase.tsx` | Player's earned badges (swipeable row on phones, top five on desktop) and the "view all" dialog (full screen on phones) | `/players/[slug]` |
+| `AchievementShowcase` | `AchievementShowcase.tsx` | In a `FeltPanel`: the player's earned badges (swipeable row on phones, top five on desktop) and the "view all" dialog (full screen on phones) | `/players/[slug]` |
 | `BalanceChart` | `BalanceChart.tsx` | Recharts line chart of cumulative balance with toggle chips (one swipeable row on phones) | `/`, `/players/[slug]` |
 | `StatsTable` | `StatsTable.tsx` | Sortable all-stats table; on phones it scrolls sideways under a sticky player column | `/` |
 | `SessionEditor` | `SessionEditor.tsx` | Upload/edit form with preview | `/admin`, `/admin/sessions/[id]` |

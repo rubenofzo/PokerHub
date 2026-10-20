@@ -27,7 +27,7 @@ Recharts. Everything is recalculated from the session history on each request (`
 
 - `src/components/` holds every UI piece; see `src/components/CLAUDE.md` for the list.
 - Shared building blocks are in `src/components/ui.tsx` (`CardPanel`, `FeltPanel`,
-  `SectionTitle`, `PageTitle`, `KpiCard`, `Money`, `PlayerDot`, `Chevron`, `EmptyState`).
+  `SectionTitle`, `PageTitle`, `KpiCard`, `Money`, `PlayerDot`, `ProgressBar`, `DialogClose`, `Chevron`, `EmptyState`).
 - View models for client components are built in `src/lib/views.ts` (`chartData`,
   `statsRows`, `achievementViews`, `playerAchievementViews`, and `playerColorMap`, the one
   source of player colours so the chart and the dots match).

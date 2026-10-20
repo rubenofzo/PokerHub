@@ -16,7 +16,6 @@ const RING: Record<RarityTier, string> = {
 const DIMS = {
   sm: "h-10 w-10 text-base",
   md: "h-12 w-12 text-xl",
-  lg: "h-16 w-16 text-2xl",
   row: "h-10 w-10 text-[15px] md:h-12 md:w-12 md:text-xl",
   showcase: "h-[52px] w-[52px] text-lg md:h-16 md:w-16 md:text-2xl",
   detail: "h-[60px] w-[60px] text-2xl md:h-16 md:w-16",

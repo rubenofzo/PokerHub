@@ -4,7 +4,7 @@ import { TIER_LABEL } from "@/achievements/engine";
 import { formatPercent } from "@/lib/format";
 import { AchievementDetailTrigger, type AchievementView } from "./AchievementDetail";
 import { Badge } from "./Badge";
-import { PlayerDot, TIER_TEXT } from "./ui";
+import { PlayerDot, ProgressBar, TIER_TEXT } from "./ui";
 
 /** "Tijs, Sam +1 more", "Everyone" or "Nobody yet", for the one-line winners on phones. */
 function winnersSummary(names: string[], playerCount?: number): string {
@@ -46,7 +46,8 @@ export function AchievementRow({
         <AchievementDetailTrigger
           id={a.id}
           className={clsx(
-            "min-w-0 text-left font-bold before:absolute before:inset-0",
+            // The ::before covers the whole row, so it carries the focus ring too.
+            "min-w-0 text-left font-bold before:absolute before:inset-0 before:rounded-lg focus-visible:outline-none focus-visible:before:outline-2 focus-visible:before:outline-offset-2 focus-visible:before:outline-brass-dark",
             group ? "text-[14.5px] md:text-lg" : "text-[14.5px] md:text-base",
             !group && a.locked && "text-ink-muted",
           )}
@@ -64,7 +65,7 @@ export function AchievementRow({
               {a.winners.length > 0 && (
                 <span className="mr-2 flex flex-none">
                   {a.winners.slice(0, 3).map((w) => (
-                    <PlayerDot key={w.playerId} color={w.color} size={16} className="-mr-[5px] border-[1.5px] border-ivory ring-0" />
+                    <PlayerDot key={w.playerId} color={w.color} size={16} className="-mr-[5px] border-[1.5px] border-ivory" />
                   ))}
                 </span>
               )}
@@ -98,17 +99,7 @@ export function AchievementRow({
           </>
         )}
 
-        {a.locked && a.progress && (
-          <span className="mt-1 flex items-center gap-2 text-xs font-semibold text-ink-muted">
-            <span className="h-1.5 w-28 overflow-hidden rounded-full bg-ivory-line">
-              <span
-                className="block h-full bg-brass-dark"
-                style={{ width: `${Math.min(1, a.progress[0] / a.progress[1]) * 100}%` }}
-              />
-            </span>
-            {a.progress[0]} / {a.progress[1]}
-          </span>
-        )}
+        {a.locked && a.progress && <ProgressBar value={a.progress} className="mt-1" />}
       </span>
 
       {/* Fixed-width rarity column, wide enough for "ULTRA RARE", so every row lines up. */}

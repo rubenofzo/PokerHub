@@ -182,43 +182,47 @@ export default async function SessionPage({ params }: Props) {
           <p className="pb-2.5 text-mist md:pb-0">No new achievements this time.</p>
         ) : (
           <>
-          {/* Phones: one row per achievement with everyone who got it; each opens the detail. */}
-          <AchievementDetailProvider achievements={achievementViews(stats, achievements)}>
-            <ul className="md:hidden">
-              {unlockGroups.map(({ summary: s, names }) => (
-                <li key={s.definition.id} className="border-t border-line first:border-0">
-                  <AchievementDetailTrigger id={s.definition.id} className="flex min-h-14 w-full items-center gap-3 py-2 text-left">
-                    <Badge icon={s.definition.icon} tier={s.tier} size="sm" />
-                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <span className="truncate text-sm font-semibold">{s.definition.name}</span>
-                      <span className="truncate text-xs text-brass">{names.join(", ")}</span>
+            {/* Phones: one row per achievement with everyone who got it; each opens the detail. */}
+            <AchievementDetailProvider
+              achievements={achievementViews(stats, achievements).filter((v) =>
+                unlockGroups.some((g) => g.summary.definition.id === v.id),
+              )}
+            >
+              <ul className="md:hidden">
+                {unlockGroups.map(({ summary: s, names }) => (
+                  <li key={s.definition.id} className="border-t border-line first:border-0">
+                    <AchievementDetailTrigger id={s.definition.id} className="flex min-h-14 w-full items-center gap-3 py-2 text-left">
+                      <Badge icon={s.definition.icon} tier={s.tier} size="sm" />
+                      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                        <span className="truncate text-sm font-semibold">{s.definition.name}</span>
+                        <span className="truncate text-xs text-brass">{names.join(", ")}</span>
+                      </span>
+                      <span className="tabular flex-none text-[11px] text-mist">{formatPercent(s.rarity)}</span>
+                    </AchievementDetailTrigger>
+                  </li>
+                ))}
+              </ul>
+            </AchievementDetailProvider>
+            <ul className="hidden grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3 md:grid">
+              {unlocks.map((u) => {
+                const s = summaryById.get(u.achievementId)!;
+                const player = playerById.get(u.playerId)!;
+                return (
+                  <li key={`${u.achievementId}-${u.playerId}`} className="flex items-center gap-3">
+                    <Badge icon={s.definition.icon} tier={s.tier} />
+                    <span className="flex min-w-0 flex-col">
+                      <span className="font-bold">{s.definition.name}</span>
+                      <span className="text-[13px] text-mist">
+                        <Link href={`/players/${player.slug}`} className="text-brass hover:text-ivory">
+                          {player.name}
+                        </Link>{" "}
+                        · {formatPercent(s.rarity)} · {TIER_LABEL[s.tier]}
+                      </span>
                     </span>
-                    <span className="tabular flex-none text-[11px] text-mist">{formatPercent(s.rarity)}</span>
-                  </AchievementDetailTrigger>
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
-          </AchievementDetailProvider>
-          <ul className="hidden grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3 md:grid">
-            {unlocks.map((u) => {
-              const s = summaryById.get(u.achievementId)!;
-              const player = playerById.get(u.playerId)!;
-              return (
-                <li key={`${u.achievementId}-${u.playerId}`} className="flex items-center gap-3">
-                  <Badge icon={s.definition.icon} tier={s.tier} />
-                  <span className="flex min-w-0 flex-col">
-                    <span className="font-bold">{s.definition.name}</span>
-                    <span className="text-[13px] text-mist">
-                      <Link href={`/players/${player.slug}`} className="text-brass hover:text-ivory">
-                        {player.name}
-                      </Link>{" "}
-                      · {formatPercent(s.rarity)} · {TIER_LABEL[s.tier]}
-                    </span>
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
           </>
         )}
       </FeltPanel>

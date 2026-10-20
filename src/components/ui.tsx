@@ -75,9 +75,9 @@ export function KpiCard({
   return (
     <div
       className={clsx(
-        "relative flex min-w-0 flex-col gap-1 px-3.5 py-3 text-ink md:min-h-[132px] md:gap-2.5 md:rounded-[14px] md:bg-ivory md:px-6 md:pt-5 md:pb-6 md:shadow-[0_10px_24px_rgba(0,0,0,0.35)]",
+        "relative flex min-w-0 flex-col gap-1 px-3.5 py-3 text-ink md:min-h-[132px] md:gap-2.5 md:px-6 md:pt-5 md:pb-6",
         grouped
-          ? "border-ivory-line max-md:odd:border-r max-md:[&:nth-child(-n+2)]:border-b"
+          ? "border-ivory-line max-md:odd:border-r max-md:[&:nth-child(-n+2)]:border-b md:rounded-[14px] md:bg-ivory md:shadow-[0_10px_24px_rgba(0,0,0,0.35)]"
           : "rounded-[14px] bg-ivory shadow-[0_10px_24px_rgba(0,0,0,0.35)]",
       )}
     >
@@ -131,12 +131,29 @@ export function Money({
   );
 }
 
-/** Small circle in the player's chart colour, so a player is recognisable across pages. */
-export function PlayerDot({ color, size = 10, className }: { color?: string; size?: number; className?: string }) {
+/**
+ * Small circle in the player's chart colour, so a player is recognisable across pages. The ring
+ * keeps light colours (one is ivory) visible on the ivory cards.
+ */
+export function PlayerDot({
+  color,
+  size = 10,
+  on = "card",
+  className,
+}: {
+  color?: string;
+  size?: number;
+  on?: "card" | "felt";
+  className?: string;
+}) {
   return (
     <span
       aria-hidden
-      className={clsx("inline-block flex-none rounded-full ring-1 ring-ink/20", className)}
+      className={clsx(
+        "inline-block flex-none rounded-full ring-1",
+        on === "card" ? "ring-ink/40" : "ring-ivory/30",
+        className,
+      )}
       style={{ backgroundColor: color ?? "#e2c27e", width: size, height: size }}
     />
   );
@@ -149,6 +166,36 @@ export const TIER_TEXT: Record<RarityTier, string> = {
   rare: "text-brass-dark",
   ultra: "text-brass-dark",
 };
+
+/** Progress towards a locked achievement: a thin bar plus "3 / 10". */
+export function ProgressBar({ value, className }: { value: [number, number]; className?: string }) {
+  const [current, target] = value;
+  return (
+    <span className={clsx("flex items-center gap-2 text-xs font-semibold text-ink-muted", className)}>
+      <span className="h-1.5 w-28 overflow-hidden rounded-full bg-ivory-line">
+        <span className="block h-full bg-brass-dark" style={{ width: `${Math.min(1, current / target) * 100}%` }} />
+      </span>
+      {current} / {target}
+    </span>
+  );
+}
+
+/** Round close button for the ivory dialogs (filled on phones, quiet until hovered on desktop). */
+export function DialogClose({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-label="Close"
+      onClick={onClick}
+      className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-ivory-line/60 text-ink hover:bg-ivory-line md:bg-transparent md:text-ink-muted md:hover:bg-ivory-line"
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
+        <path d="M6 6l12 12" />
+        <path d="M18 6L6 18" />
+      </svg>
+    </button>
+  );
+}
 
 /** Chevron used at the end of tappable list rows on phones. */
 export function Chevron({ className }: { className?: string }) {

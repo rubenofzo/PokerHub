@@ -22,6 +22,7 @@ export function AchievementList({ achievements, playerCount }: { achievements: A
   };
   const listed = achievements
     .filter((a) => (filter === "all" ? true : filter === "unlocked" ? !a.locked : a.locked))
+    // Ties break on the displayed name; hidden ones arrive as "???" (see `redact` in views.ts).
     .sort((a, b) => (sort === "rarest" ? a.rarity - b.rarity : b.rarity - a.rarity) || a.name.localeCompare(b.name));
 
   return (
@@ -40,7 +41,7 @@ export function AchievementList({ achievements, playerCount }: { achievements: A
                 aria-pressed={filter === f}
                 onClick={() => setFilter(f)}
                 className={clsx(
-                  "min-h-9 flex-1 rounded-full px-2 text-[12.5px] md:flex-none md:px-4 md:text-sm",
+                  "min-h-11 flex-1 rounded-full px-2 text-[12.5px] md:min-h-9 md:flex-none md:px-4 md:text-sm",
                   filter === f ? "bg-brass font-bold text-felt" : "font-semibold text-mist hover:text-ivory",
                 )}
               >

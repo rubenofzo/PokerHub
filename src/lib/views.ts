@@ -80,12 +80,19 @@ function winnersById(stats: HubStats, achievements: AchievementResults): Map<str
   );
 }
 
+/** Hidden and still locked: strip everything that would give it away before it reaches the client. */
+function redact(view: AchievementView, index: number): AchievementView {
+  return view.secret
+    ? { ...view, id: `hidden-${index}`, name: "???", description: "", icon: "?", progress: null, winners: [] }
+    : view;
+}
+
 /** Every achievement as seen by the group: locked when nobody has it yet. */
 export function achievementViews(stats: HubStats, achievements: AchievementResults): AchievementView[] {
   const winners = winnersById(stats, achievements);
-  return achievements.summaries.map((s) => {
+  return achievements.summaries.map((s, i) => {
     const locked = s.unlocks.length === 0;
-    return {
+    return redact({
       id: s.definition.id,
       name: s.definition.name,
       description: s.definition.description,
@@ -99,7 +106,7 @@ export function achievementViews(stats: HubStats, achievements: AchievementResul
       unlockedDate: null,
       unlockedSessionId: null,
       unlockedOrder: null,
-    };
+    }, i);
   });
 }
 
@@ -111,19 +118,21 @@ export function playerAchievementViews(
 ): AchievementView[] {
   const winners = winnersById(stats, achievements);
   const order = new Map(stats.sessions.map((s, i) => [s.id, i]));
-  return (achievements.byPlayer.get(playerId) ?? []).map((a: PlayerAchievement) => ({
-    id: a.definition.id,
-    name: a.definition.name,
-    description: a.definition.description,
-    icon: a.definition.icon,
-    tier: a.tier,
-    rarity: a.rarity,
-    locked: !a.unlocked,
-    secret: !a.unlocked && !!a.definition.hidden,
-    progress: a.progress,
-    winners: winners.get(a.definition.id) ?? [],
-    unlockedDate: a.unlocked ? formatDate(a.unlocked.date) : null,
-    unlockedSessionId: a.unlocked?.sessionId ?? null,
-    unlockedOrder: a.unlocked ? (order.get(a.unlocked.sessionId) ?? null) : null,
-  }));
+  return (achievements.byPlayer.get(playerId) ?? []).map((a: PlayerAchievement, i) =>
+    redact({
+      id: a.definition.id,
+      name: a.definition.name,
+      description: a.definition.description,
+      icon: a.definition.icon,
+      tier: a.tier,
+      rarity: a.rarity,
+      locked: !a.unlocked,
+      secret: !a.unlocked && !!a.definition.hidden,
+      progress: a.progress,
+      winners: winners.get(a.definition.id) ?? [],
+      unlockedDate: a.unlocked ? formatDate(a.unlocked.date) : null,
+      unlockedSessionId: a.unlocked?.sessionId ?? null,
+      unlockedOrder: a.unlocked ? (order.get(a.unlocked.sessionId) ?? null) : null,
+    }, i),
+  );
 }
