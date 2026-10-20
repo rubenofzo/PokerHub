@@ -3,7 +3,7 @@ import { DM_Serif_Display, Manrope } from "next/font/google";
 import { BottomNav } from "@/components/BottomNav";
 import { SiteHeader } from "@/components/SiteHeader";
 import { FeltPanel } from "@/components/ui";
-import { getSetupProblem } from "@/lib/data";
+import { getHub, getSetupProblem } from "@/lib/data";
 import "./globals.css";
 
 const display = DM_Serif_Display({ subsets: ["latin"], weight: "400", variable: "--font-dm-serif" });
@@ -20,6 +20,7 @@ export const viewport: Viewport = { themeColor: "#0e3b2c", viewportFit: "cover" 
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const problem = await getSetupProblem();
+  const next = problem ? null : (await getHub()).nextSession;
   return (
     <html lang="en" className={`${display.variable} ${sans.variable}`}>
       <body>
@@ -33,7 +34,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <>
               <SiteHeader />
               {children}
-              <BottomNav />
+              <BottomNav nextSessionId={next?.id} />
             </>
           )}
         </div>

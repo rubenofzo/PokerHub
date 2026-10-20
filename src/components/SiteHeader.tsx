@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import Link from "next/link";
 import { getHub } from "@/lib/data";
 import { formatDate } from "@/lib/format";
@@ -15,7 +16,6 @@ export async function SiteHeader() {
     `${stats.players.length} ${stats.players.length === 1 ? "player" : "players"}`,
     last ? `last game ${formatDate(last.date)}` : "no games yet",
   ];
-
 
   return (
     <header className="grid grid-cols-[1fr_auto] items-center gap-x-4 md:flex md:flex-wrap md:items-end md:justify-between md:gap-4 md:border-b md:border-line md:pb-6">
@@ -50,9 +50,20 @@ export async function SiteHeader() {
         <Link href="/achievements" className="hidden px-3 py-3 text-[15px] font-semibold text-brass hover:text-ivory md:inline">
           Achievements
         </Link>
+        {/* While a session is planned, desktop's highlighted button goes to it and "New
+            session" becomes a plain link; phones keep the round plus (the next session is a
+            tab in `BottomNav`). */}
+        {nextSession && (
+          <Link href="/admin" className="hidden px-3 py-3 text-[15px] font-semibold text-brass hover:text-ivory md:inline">
+            New session
+          </Link>
+        )}
         <Link
           href="/admin"
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full border-[1.5px] border-brass text-[15px] font-bold text-brass hover:bg-brass hover:text-felt md:h-auto md:min-h-11 md:w-auto md:border-2 md:px-5"
+          className={clsx(
+            "inline-flex h-11 w-11 items-center justify-center rounded-full border-[1.5px] border-brass text-[15px] font-bold text-brass hover:bg-brass hover:text-felt md:h-auto md:min-h-11 md:w-auto md:border-2 md:px-5",
+            nextSession && "md:hidden",
+          )}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="md:hidden">
             <path d="M12 5v14" />
@@ -60,6 +71,14 @@ export async function SiteHeader() {
           </svg>
           <span className="sr-only md:not-sr-only">New session</span>
         </Link>
+        {nextSession && (
+          <Link
+            href={`/sessions/${nextSession.id}`}
+            className="hidden min-h-11 items-center rounded-full border-2 border-brass px-5 text-[15px] font-bold text-brass hover:bg-brass hover:text-felt md:inline-flex"
+          >
+            Next session
+          </Link>
+        )}
       </nav>
     </header>
   );
