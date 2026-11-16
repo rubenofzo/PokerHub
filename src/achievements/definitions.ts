@@ -129,4 +129,12 @@ export const achievements: AchievementDefinition[] = [
     check: (c) => c.totalNetCents >= 10000,
     progress: (c) => [Math.max(0, Math.floor(c.totalNetCents / 100)), 100],
   },
+  {
+    id: "reverseCentury",
+    name: "Reverse Century",
+    description: "Reach -€100 all-time.",
+    icon: "€",
+    check: (c) => c.totalNetCents <= 10000,
+    progress: (c) => [Math.min(0,-1 * Math.floor(c.totalNetCents / 100)), -100],
+  },
 ];
