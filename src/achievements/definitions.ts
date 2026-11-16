@@ -137,4 +137,27 @@ export const achievements: AchievementDefinition[] = [
     check: (c) => c.totalNetCents <= -10000,
     progress: (c) => [Math.max(0, Math.floor(-c.totalNetCents / 100)), 100],
   },
+  {
+    id: "comeback-legend",
+    name: "Comeback Legend",
+    description: "Climb from -€100 all-time to +€100 all-time.",
+    icon: "⇈",
+    check: (c) => c.lowestTotalNetCents <= -10000 && c.totalNetCents >= 10000,
+  },
+  {
+    id: "collector",
+    name: "Collector",
+    description: "Earn every other achievement.",
+    icon: "★",
+    check: (c) => otherAchievements().every((a) => c.unlockedIds.has(a.id)),
+    progress: (c) => {
+      const others = otherAchievements();
+      return [others.filter((a) => c.unlockedIds.has(a.id)).length, others.length];
+    },
+  },
 ];
+
+/** Every achievement except Collector itself. */
+function otherAchievements() {
+  return achievements.filter((a) => a.id !== "collector");
+}

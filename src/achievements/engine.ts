@@ -57,6 +57,8 @@ export function evaluateAchievements(
   const histories = new Map<number, SessionResult[]>();
   const totals = new Map<number, number>();
   const everNegative = new Map<number, boolean>();
+  const lowest = new Map<number, number>();
+  const unlockedIds = new Map<number, Set<string>>();
   const winStreak = new Map<number, number>();
   const lossStreak = new Map<number, number>();
   const attendStreak = new Map<number, number>();
@@ -73,6 +75,7 @@ export function evaluateAchievements(
     for (const r of session.results) {
       histories.set(r.playerId, [...(histories.get(r.playerId) ?? []), r]);
       totals.set(r.playerId, (totals.get(r.playerId) ?? 0) + r.netCents);
+      lowest.set(r.playerId, Math.min(lowest.get(r.playerId) ?? 0, totals.get(r.playerId)!));
       winStreak.set(r.playerId, r.netCents > 0 ? (winStreak.get(r.playerId) ?? 0) + 1 : 0);
       lossStreak.set(r.playerId, r.netCents < 0 ? (lossStreak.get(r.playerId) ?? 0) + 1 : 0);
     }
@@ -87,6 +90,8 @@ export function evaluateAchievements(
     for (const player of active) {
       const result = session.results.find((r) => r.playerId === player.id) ?? null;
       attendStreak.set(player.id, result ? (attendStreak.get(player.id) ?? 0) + 1 : 0);
+      const earned = unlockedIds.get(player.id) ?? new Set<string>();
+      unlockedIds.set(player.id, earned);
       const ctx: AchievementContext = {
         player,
         session,
@@ -96,6 +101,7 @@ export function evaluateAchievements(
         totalNetCents: totals.get(player.id) ?? 0,
         previousTotalNetCents: previousTotals.get(player.id) ?? 0,
         wasEverNegative: everNegative.get(player.id) ?? false,
+        lowestTotalNetCents: lowest.get(player.id) ?? 0,
         winStreak: winStreak.get(player.id) ?? 0,
         lossStreak: lossStreak.get(player.id) ?? 0,
         attendanceStreak: attendStreak.get(player.id) ?? 0,
@@ -104,19 +110,26 @@ export function evaluateAchievements(
         isBiggestWinner: !!result && result.netCents > 0 && result.netCents === top,
         isBiggestLoser: !!result && result.netCents < 0 && result.netCents === bottom,
         sessionAverageInCents: averageIn,
+        unlockedIds: earned,
       };
       lastContext.set(player.id, ctx);
 
-      for (const def of definitions) {
-        const key = `${def.id}:${player.id}`;
-        if (unlocked.has(key)) continue;
-        if (safeCheck(def, ctx)) {
-          unlocked.set(key, {
-            achievementId: def.id,
-            playerId: player.id,
-            sessionId: session.id,
-            date: session.date,
-          });
+      // Repeat until nothing new unlocks, so achievements about achievements see this session's.
+      let changed = true;
+      while (changed) {
+        changed = false;
+        for (const def of definitions) {
+          if (earned.has(def.id)) continue;
+          if (safeCheck(def, ctx)) {
+            earned.add(def.id);
+            unlocked.set(`${def.id}:${player.id}`, {
+              achievementId: def.id,
+              playerId: player.id,
+              sessionId: session.id,
+              date: session.date,
+            });
+            changed = true;
+          }
         }
       }
     }

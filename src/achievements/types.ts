@@ -18,6 +18,8 @@ export type AchievementContext = {
   previousTotalNetCents: number;
   /** Whether the all-time net was ever below zero before this session. */
   wasEverNegative: boolean;
+  /** Lowest all-time net in cents after any session so far (includes this one). */
+  lowestTotalNetCents: number;
   /** Current run of sessions won / lost in a row (sessions they skipped don't break it). */
   winStreak: number;
   lossStreak: number;
@@ -31,6 +33,12 @@ export type AchievementContext = {
   isBiggestLoser: boolean;
   /** Average money in per player for this session. */
   sessionAverageInCents: number;
+  /**
+   * Ids of the achievements this player has earned so far, including ones earned in this
+   * session. The engine re-runs the checks until nothing new unlocks, so a check that
+   * depends on other achievements (like Collector) sees them whatever the list order.
+   */
+  unlockedIds: ReadonlySet<string>;
 };
 
 export type AchievementDefinition = {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fixturePlayers, fixtureSessions } from "@/lib/fixtures";
-import { computeStats } from "@/lib/stats";
+import { computeStats, type RawSession } from "@/lib/stats";
 import { evaluateAchievements, rarityTier } from "./engine";
 import type { AchievementDefinition } from "./types";
 
@@ -69,5 +69,59 @@ describe("rarityTier", () => {
     expect(rarityTier(0.4)).toBe("uncommon");
     expect(rarityTier(0.2)).toBe("rare");
     expect(rarityTier(0.1)).toBe("ultra");
+  });
+});
+
+describe("Comeback Legend", () => {
+  const [a, b] = fixturePlayers;
+  // Each session a wins `cents` from b (negative: a loses), so every session balances.
+  const ids = (nets: number[]) => {
+    const sessions: RawSession[] = nets.map((cents, i) => ({
+      id: i + 1,
+      date: `2026-01-${String(i + 1).padStart(2, "0")}`,
+      note: null,
+      results: [
+        { playerId: a.id, moneyInCents: 50000, moneyOutCents: 50000 + cents, buyIns: null },
+        { playerId: b.id, moneyInCents: 50000, moneyOutCents: 50000 - cents, buyIns: null },
+      ],
+    }));
+    return evaluateAchievements(computeStats([a, b], sessions))
+      .byPlayer.get(a.id)!
+      .filter((x) => x.unlocked)
+      .map((x) => x.definition.id);
+  };
+  it("unlocks only after going from -€100 to +€100", () => {
+    expect(ids([-10000, 20000])).toContain("comeback-legend");
+    expect(ids([-9900, 19900])).not.toContain("comeback-legend");
+    expect(ids([10000])).not.toContain("comeback-legend");
+  });
+});
+
+describe("Collector", () => {
+  const defs = (order: "first" | "last"): AchievementDefinition[] => {
+    const all: AchievementDefinition[] = [
+      { id: "a", name: "A", description: "", icon: "a", check: () => true },
+      { id: "b", name: "B", description: "", icon: "b", check: (c) => c.sessionsPlayed >= 2 },
+    ];
+    const collector: AchievementDefinition = {
+      id: "collector",
+      name: "Collector",
+      description: "",
+      icon: "★",
+      check: (c) => all.every((a) => c.unlockedIds.has(a.id)),
+    };
+    return order === "first" ? [collector, ...all] : [...all, collector];
+  };
+  it.each(["first", "last"] as const)("unlocks in the same session as the last one (listed %s)", (order) => {
+    const r = evaluateAchievements(stats, defs(order));
+    const c = r.byPlayer.get(idOf("Tijs"))!.find((a) => a.definition.id === "collector")!;
+    expect(c.unlocked?.sessionId).toBe(2);
+    const arjan = r.byPlayer.get(idOf("Arjan"))!.find((a) => a.definition.id === "collector")!;
+    expect(arjan.unlocked).toBeNull();
+  });
+  it("is locked for everyone with the real list and counts progress", () => {
+    expect(summary("collector").unlocks).toHaveLength(0);
+    const c = results.byPlayer.get(idOf("Tijs"))!.find((a) => a.definition.id === "collector")!;
+    expect(c.progress).toEqual([7, 18]);
   });
 });
