@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { fixturePlayers, fixtureSessions } from "@/lib/fixtures";
 import { computeStats, type RawSession } from "@/lib/stats";
 import { evaluateAchievements, rarityTier } from "./engine";
+import { achievements as defaultDefinitions } from "./definitions";
 import type { AchievementDefinition } from "./types";
 
 const stats = computeStats(fixturePlayers, fixtureSessions);
@@ -122,6 +123,6 @@ describe("Collector", () => {
   it("is locked for everyone with the real list and counts progress", () => {
     expect(summary("collector").unlocks).toHaveLength(0);
     const c = results.byPlayer.get(idOf("Tijs"))!.find((a) => a.definition.id === "collector")!;
-    expect(c.progress).toEqual([7, 18]);
+    expect(c.progress).toEqual([7, defaultDefinitions.length - 1]);
   });
 });
